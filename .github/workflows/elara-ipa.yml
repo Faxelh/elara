@@ -27,8 +27,8 @@ jobs:
 
       - name: Compiler pour iPhone (sans signature)
         run: |
-          set -o pipefail
           mkdir -p build
+          set +e
           xcodebuild build \
             -project Elara.xcodeproj \
             -scheme Elara \
@@ -38,8 +38,16 @@ jobs:
             -derivedDataPath build/derived \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" 2>&1 | tee build/xcodebuild.log | grep -E "error:|warning: .*deprecated|\*\* BUILD" || true
-          test -d build/derived/Build/Products/Release-iphoneos/Elara.app
+            CODE_SIGN_IDENTITY="" > build/xcodebuild.log 2>&1
+          statut=$?
+          set -e
+          grep -E "error:|\*\* BUILD" build/xcodebuild.log || true
+          if [ $statut -ne 0 ]; then
+            echo "::error::La compilation a échoué. Voir les lignes « error: » ci-dessus."
+            exit 1
+          fi
+          # Vérifie que l'exécutable existe vraiment (sinon l'IPA serait invalide).
+          test -f build/derived/Build/Products/Release-iphoneos/Elara.app/Elara
 
       - name: Créer Elara.ipa
         run: |

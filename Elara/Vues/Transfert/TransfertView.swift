@@ -59,47 +59,12 @@ struct TransfertView: View {
     private var radar: some View {
         VStack(spacing: 16) {
             GeometryReader { geo in
-                let taille = min(geo.size.width, geo.size.height)
-                let centre = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-                ZStack {
-                    ForEach(1..<4) { i in
-                        Circle()
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 2)
-                            .frame(width: taille * CGFloat(i) / 3.2, height: taille * CGFloat(i) / 3.2)
-                    }
-                    Circle()
-                        .fill(Theme.accent.opacity(0.08))
-                        .frame(width: taille * 0.9, height: taille * 0.9)
-                        .scaleEffect(transfert.actif ? 1 : 0.4)
-                        .opacity(transfert.actif ? 0 : 1)
-                        .animation(.easeOut(duration: 2.2).repeatForever(autoreverses: false), value: transfert.actif)
-
-                    Avatar(nom: transfert.monAppareil.displayName, icone: "iphone", couleur: Theme.accent, etat: nil)
-                        .position(centre)
-
-                    ForEach(Array(transfert.appareils.enumerated()), id: \.element) { index, appareil in
-                        let angle = Double(index) / Double(max(transfert.appareils.count, 1)) * 2 * .pi - .pi / 2
-                        let rayon = taille * 0.34
-                        Button {
-                            if transfert.estConnecte(appareil) {
-                                destinataire = appareil
-                            } else {
-                                transfert.inviter(appareil)
-                            }
-                        } label: {
-                            Avatar(
-                                nom: appareil.displayName,
-                                icone: "iphone.gen3",
-                                couleur: transfert.estConnecte(appareil) ? Theme.vert : Theme.bleu,
-                                etat: transfert.estConnecte(appareil)
-                                    ? String(localized: "Connecté")
-                                    : (transfert.enConnexion.contains(appareil) ? String(localized: "Connexion…") : nil)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .position(x: centre.x + rayon * cos(angle), y: centre.y + rayon * sin(angle))
-                    }
-                }
+                ZoneRadar(
+                    taille: min(geo.size.width, geo.size.height),
+                    centre: CGPoint(x: geo.size.width / 2, y: geo.size.height / 2),
+                    transfert: transfert,
+                    choisir: { destinataire = $0 }
+                )
             }
             .frame(maxHeight: 420)
 
@@ -113,9 +78,7 @@ struct TransfertView: View {
                     .padding(.horizontal)
             }
 
-            Text(transfert.appareils.isEmpty
-                 ? LocalizedStringKey("Ouvrez Elara sur l'onglet Transfert de l'autre iPhone. Wi‑Fi et Bluetooth doivent être activés.")
-                 : LocalizedStringKey("Touchez un appareil pour vous connecter, puis touchez-le à nouveau pour envoyer des fichiers."))
+            Text(consigne)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
@@ -124,6 +87,13 @@ struct TransfertView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 12)
         }
+    }
+
+    private var consigne: LocalizedStringKey {
+        if transfert.appareils.isEmpty {
+            return "Ouvrez Elara sur l'onglet Transfert de l'autre iPhone. Wi‑Fi et Bluetooth doivent être activés."
+        }
+        return "Touchez un appareil pour vous connecter, puis touchez-le à nouveau pour envoyer des fichiers."
     }
 
     // MARK: - Ordinateur (navigateur web)
@@ -173,6 +143,75 @@ struct TransfertView: View {
             }
             .padding()
         }
+    }
+}
+
+/// Cercles du radar, avec cet iPhone au centre et les appareils trouvés autour.
+struct ZoneRadar: View {
+    let taille: CGFloat
+    let centre: CGPoint
+    let transfert: Transfert
+    let choisir: (MCPeerID) -> Void
+
+    var body: some View {
+        ZStack {
+            ForEach(1..<4) { i in
+                CercleRadar(diametre: taille * CGFloat(i) / 3.2)
+            }
+            OndeRadar(diametre: taille * 0.9, actif: transfert.actif)
+            Avatar(nom: transfert.monAppareil.displayName, icone: "iphone", couleur: Theme.accent, etat: nil)
+                .position(centre)
+            ForEach(Array(transfert.appareils.enumerated()), id: \.element) { element in
+                boutonAppareil(element.element, index: element.offset)
+            }
+        }
+    }
+
+    private func position(index: Int) -> CGPoint {
+        let total = Double(max(transfert.appareils.count, 1))
+        let angle: Double = Double(index) / total * 2 * Double.pi - Double.pi / 2
+        let rayon: Double = Double(taille) * 0.34
+        return CGPoint(x: Double(centre.x) + rayon * cos(angle), y: Double(centre.y) + rayon * sin(angle))
+    }
+
+    private func etat(_ appareil: MCPeerID) -> String? {
+        if transfert.estConnecte(appareil) { return String(localized: "Connecté") }
+        if transfert.enConnexion.contains(appareil) { return String(localized: "Connexion…") }
+        return nil
+    }
+
+    private func boutonAppareil(_ appareil: MCPeerID, index: Int) -> some View {
+        let connecte = transfert.estConnecte(appareil)
+        let couleur: Color = connecte ? Theme.vert : Theme.bleu
+        return Button {
+            if connecte { choisir(appareil) } else { transfert.inviter(appareil) }
+        } label: {
+            Avatar(nom: appareil.displayName, icone: "iphone.gen3", couleur: couleur, etat: etat(appareil))
+        }
+        .buttonStyle(.plain)
+        .position(position(index: index))
+    }
+}
+
+struct CercleRadar: View {
+    let diametre: CGFloat
+    var body: some View {
+        Circle()
+            .stroke(Color.primary.opacity(0.08), lineWidth: 2)
+            .frame(width: diametre, height: diametre)
+    }
+}
+
+struct OndeRadar: View {
+    let diametre: CGFloat
+    let actif: Bool
+    var body: some View {
+        Circle()
+            .fill(Theme.accent.opacity(0.08))
+            .frame(width: diametre, height: diametre)
+            .scaleEffect(actif ? 1 : 0.4)
+            .opacity(actif ? 0 : 1)
+            .animation(.easeOut(duration: 2.2).repeatForever(autoreverses: false), value: actif)
     }
 }
 
