@@ -63,3 +63,39 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+
+  elara-ipa:
+    name: Elara – IPA non signé (Sideloadly / 3uTools)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+    scripts:
+      - name: Générer le projet Xcode
+        script: |
+          brew install xcodegen
+          pip3 install --quiet pillow || pip3 install --quiet --break-system-packages pillow
+          python3 scripts/icone.py
+          xcodegen generate
+      - name: Compiler pour iPhone (sans signature)
+        script: |
+          set -o pipefail
+          xcodebuild build \
+            -project Elara.xcodeproj \
+            -scheme Elara \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -derivedDataPath build/derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Créer Elara.ipa
+        script: |
+          rm -rf build/ipa
+          mkdir -p build/ipa/Payload
+          cp -R build/derived/Build/Products/Release-iphoneos/Elara.app build/ipa/Payload/
+          cd build/ipa && zip -qry Elara.ipa Payload
+          ls -lh Elara.ipa
+    artifacts:
+      - build/ipa/Elara.ipa
