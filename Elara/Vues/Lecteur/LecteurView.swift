@@ -3,6 +3,7 @@ import AVKit
 
 struct LecteurView: View {
     @Environment(LecteurController.self) private var lecteur
+    @Environment(\.scenePhase) private var scenePhase
 
     private var estVideo: Bool { lecteur.mediaActuel?.type == .video }
 
@@ -44,6 +45,12 @@ struct LecteurView: View {
         }
         .foregroundStyle(estVideo ? Color.white : Color.primary)
         .background((estVideo ? Color.black : Color(.systemBackground)).ignoresSafeArea())
+        .overlay {
+            // Cache un média privé dans le sélecteur d'apps
+            if lecteur.mediaActuel?.estPrive == true && scenePhase != .active {
+                Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
+            }
+        }
     }
 }
 

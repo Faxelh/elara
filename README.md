@@ -12,6 +12,12 @@ Lecteur vidéo et audio pour iPhone, entièrement en français (SwiftUI, iOS 17+
 - Historique, vider le cache, noter l'app, à propos
 - Renommer, partager, supprimer (appui long sur un média)
 
+## Étape 2
+- **Dossier privé** protégé par Face ID (ou Touch ID / code de l'iPhone)
+- Les médias privés sont invisibles dans l'accueil, l'historique et l'app Fichiers, et chiffrés quand l'iPhone est verrouillé
+- « Déplacer vers Privé » par appui long sur un média, ou import direct dans le dossier privé
+- Verrouillage automatique quand on quitte l'app, contenu masqué dans le sélecteur d'apps
+
 Formats : mp4, mov, m4v, 3gp, mp3, m4a, aac, wav, aiff, caf, flac.
 
 ## Mettre le projet sur GitHub (depuis Windows)

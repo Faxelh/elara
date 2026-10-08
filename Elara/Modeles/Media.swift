@@ -15,7 +15,10 @@ struct Media: Identifiable, Codable, Hashable {
     var dateAjout = Date()
     var derniereLecture: Date?
     var position: Double = 0
+    /// true si le média est rangé dans le dossier privé
+    var prive: Bool? = nil
 
+    var estPrive: Bool { prive == true }
     var dureeTexte: String { Format.duree(duree) }
     var tailleTexte: String { Format.taille(taille) }
     var progression: Double { duree > 0 ? min(position / duree, 1) : 0 }

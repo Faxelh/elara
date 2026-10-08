@@ -5,6 +5,7 @@ import AVFoundation
 struct ElaraApp: App {
     @State private var bibliotheque: Bibliotheque
     @State private var lecteur: LecteurController
+    @State private var coffre = Coffre()
 
     init() {
         UserDefaults.standard.register(defaults: [
@@ -23,6 +24,7 @@ struct ElaraApp: App {
             RacineView()
                 .environment(bibliotheque)
                 .environment(lecteur)
+                .environment(coffre)
                 .tint(Theme.accent)
         }
     }
@@ -30,6 +32,7 @@ struct ElaraApp: App {
 
 struct RacineView: View {
     @Environment(LecteurController.self) private var lecteur
+    @Environment(Coffre.self) private var coffre
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -47,8 +50,24 @@ struct RacineView: View {
         .fullScreenCover(isPresented: $lecteur.estAffiche) {
             LecteurView()
         }
+        .overlay {
+            // Cache le contenu privé dans le sélecteur d'apps
+            if coffre.estDeverrouille && scenePhase != .active {
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                }
+                .ignoresSafeArea()
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { lecteur.sauverPosition() }
+            if phase == .background {
+                coffre.verrouiller()
+                if lecteur.mediaActuel?.estPrive == true { lecteur.fermer() }
+            }
         }
     }
 }

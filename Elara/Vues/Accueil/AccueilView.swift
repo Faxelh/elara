@@ -12,7 +12,7 @@ struct AccueilView: View {
     @State private var filtre: Filtre = .tout
     @State private var aRenommer: Media?
     @State private var nouveauNom = ""
-    @State private var alertePrive = false
+    @State private var afficherPrive = false
 
     enum Filtre: String, CaseIterable, Identifiable {
         case tout = "Tout", videos = "Vidéos", audio = "Audio"
@@ -41,7 +41,7 @@ struct AccueilView: View {
                             afficherFichiers = true
                         }
                         CarteRaccourci(titre: "Privé", icone: "lock.fill", couleur: Theme.corail) {
-                            alertePrive = true
+                            afficherPrive = true
                         }
                     }
 
@@ -124,10 +124,8 @@ struct AccueilView: View {
                     if let media = aRenommer { bib.renommer(media, en: nouveauNom) }
                 }
             }
-            .alert("Dossier privé", isPresented: $alertePrive) {
-                Button("OK") {}
-            } message: {
-                Text("Le dossier privé protégé par Face ID arrive dans la prochaine version.")
+            .navigationDestination(isPresented: $afficherPrive) {
+                CoffreView()
             }
             .refreshable { await bib.synchroniserDossier() }
             .task { await bib.synchroniserDossier() }
@@ -141,6 +139,7 @@ struct AccueilView: View {
             nouveauNom = media.nom
             aRenommer = media
         }
+        Button("Déplacer vers Privé", systemImage: "lock") { bib.definirPrive(media, true) }
         ShareLink(item: bib.url(de: media)) {
             Label("Partager", systemImage: "square.and.arrow.up")
         }
