@@ -1,0 +1,64 @@
+# Compile Elara et produit Elara.ipa (non signé) sur les Mac gratuits de GitHub.
+# À installer ensuite avec Sideloadly ou 3uTools.
+name: Elara – IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Préparer les outils
+        run: |
+          brew install xcodegen
+          python3 -m pip install --quiet --break-system-packages pillow || python3 -m pip install --quiet pillow
+
+      - name: Générer l'icône et le projet Xcode
+        run: |
+          python3 scripts/icone.py
+          xcodegen generate
+
+      - name: Compiler pour iPhone (sans signature)
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild build \
+            -project Elara.xcodeproj \
+            -scheme Elara \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -derivedDataPath build/derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" 2>&1 | tee build/xcodebuild.log | grep -E "error:|warning: .*deprecated|\*\* BUILD" || true
+          test -d build/derived/Build/Products/Release-iphoneos/Elara.app
+
+      - name: Créer Elara.ipa
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/derived/Build/Products/Release-iphoneos/Elara.app build/ipa/Payload/
+          cd build/ipa && zip -qry Elara.ipa Payload
+          ls -lh Elara.ipa
+
+      - name: Mettre Elara.ipa à disposition
+        uses: actions/upload-artifact@v4
+        with:
+          name: Elara-ipa
+          path: build/ipa/Elara.ipa
+          retention-days: 14
+
+      - name: Journal de compilation (en cas d'erreur)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-xcodebuild
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
