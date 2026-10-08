@@ -10,6 +10,7 @@ import Observation
 @Observable
 final class Bibliotheque {
     private(set) var tous: [Media] = []
+    private(set) var dossiers: [Dossier] = []
     var importEnCours = false
 
     var medias: [Media] { tous.filter { !$0.estPrive } }
@@ -21,6 +22,7 @@ final class Bibliotheque {
     let dossierMedias: URL
     @ObservationIgnored private let dossierCoffre: URL
     @ObservationIgnored private let fichierIndex: URL
+    @ObservationIgnored private let fichierDossiers: URL
     @ObservationIgnored private let dossierMiniatures: URL
     @ObservationIgnored private let dossierMiniaturesPrivees: URL
     @ObservationIgnored private var enTraitement = Set<String>()
@@ -33,6 +35,7 @@ final class Bibliotheque {
         let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try? fm.createDirectory(at: support, withIntermediateDirectories: true)
         fichierIndex = support.appendingPathComponent("bibliotheque.json")
+        fichierDossiers = support.appendingPathComponent("dossiers.json")
 
         dossierCoffre = support.appendingPathComponent("Coffre", isDirectory: true)
         dossierMiniaturesPrivees = dossierCoffre.appendingPathComponent(".miniatures", isDirectory: true)
@@ -67,7 +70,7 @@ final class Bibliotheque {
 
     /// Copie (ou déplace) un fichier dans la bibliothèque, ou directement dans le dossier privé.
     @discardableResult
-    func importer(depuis source: URL, deplacer: Bool = false, prive: Bool = false) async -> Media? {
+    func importer(depuis source: URL, deplacer: Bool = false, prive: Bool = false, dossier: UUID? = nil) async -> Media? {
         guard let type = Self.type(pour: source.pathExtension) else { return nil }
         let acces = source.startAccessingSecurityScopedResource()
         defer { if acces { source.stopAccessingSecurityScopedResource() } }
@@ -85,11 +88,11 @@ final class Bibliotheque {
             return nil
         }
         if prive { proteger(destination) }
-        return await ajouter(fichier: destination, type: type, prive: prive)
+        return await ajouter(fichier: destination, type: type, prive: prive, dossier: dossier)
     }
 
     @discardableResult
-    private func ajouter(fichier: URL, type: TypeMedia, prive: Bool = false) async -> Media {
+    private func ajouter(fichier: URL, type: TypeMedia, prive: Bool = false, dossier: UUID? = nil) async -> Media {
         let nomFichier = fichier.lastPathComponent
         enTraitement.insert(nomFichier)
         defer { enTraitement.remove(nomFichier) }
@@ -105,7 +108,8 @@ final class Bibliotheque {
             type: type,
             taille: taille,
             duree: duree.isFinite ? duree : 0,
-            prive: prive ? true : nil
+            prive: prive ? true : nil,
+            dossier: prive ? nil : dossier
         )
         if type == .video {
             await genererMiniature(media, asset: asset)
@@ -170,8 +174,29 @@ final class Bibliotheque {
         if prive {
             proteger(destination)
             nouveau.derniereLecture = nil
+            nouveau.dossier = nil
         }
         tous[i] = nouveau
+        enregistrer()
+    }
+
+    /// Remplace le fichier d'un média par une nouvelle version (ex. vidéo compressée).
+    func remplacer(_ media: Media, par source: URL) {
+        guard let i = tous.firstIndex(where: { $0.id == media.id }) else { return }
+        let dossier = media.estPrive ? dossierCoffre : dossierMedias
+        let base = (media.fichier as NSString).deletingPathExtension
+        let ancien = url(de: media)
+        try? FileManager.default.removeItem(at: ancien)
+        let destination = urlLibre(pour: base + "." + source.pathExtension, dans: dossier)
+        do {
+            try FileManager.default.moveItem(at: source, to: destination)
+        } catch {
+            return
+        }
+        if media.estPrive { proteger(destination) }
+        let attributs = try? FileManager.default.attributesOfItem(atPath: destination.path)
+        tous[i].fichier = destination.lastPathComponent
+        tous[i].taille = (attributs?[.size] as? NSNumber)?.int64Value ?? tous[i].taille
         enregistrer()
     }
 
@@ -181,6 +206,49 @@ final class Bibliotheque {
             [.protectionKey: FileProtectionType.completeUnlessOpen],
             ofItemAtPath: url.path
         )
+    }
+
+    // MARK: - Dossiers de l'accueil
+
+    func mediasDans(_ dossier: UUID?) -> [Media] {
+        medias.filter { $0.dossier == dossier }
+    }
+
+    func nombre(dans dossier: Dossier) -> Int {
+        medias.filter { $0.dossier == dossier.id }.count
+    }
+
+    @discardableResult
+    func creerDossier(_ nom: String) -> Dossier? {
+        let propre = String(nom.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Dossier.longueurMax))
+        guard !propre.isEmpty else { return nil }
+        let dossier = Dossier(nom: propre)
+        dossiers.append(dossier)
+        enregistrerDossiers()
+        return dossier
+    }
+
+    func renommerDossier(_ dossier: Dossier, en nom: String) {
+        let propre = String(nom.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Dossier.longueurMax))
+        guard !propre.isEmpty, let i = dossiers.firstIndex(where: { $0.id == dossier.id }) else { return }
+        dossiers[i].nom = propre
+        enregistrerDossiers()
+    }
+
+    /// Supprime le dossier ; ses médias reviennent sur l'accueil.
+    func supprimerDossier(_ dossier: Dossier) {
+        for i in tous.indices where tous[i].dossier == dossier.id {
+            tous[i].dossier = nil
+        }
+        dossiers.removeAll { $0.id == dossier.id }
+        enregistrer()
+        enregistrerDossiers()
+    }
+
+    func deplacer(_ media: Media, vers dossier: UUID?) {
+        guard let i = tous.firstIndex(where: { $0.id == media.id }) else { return }
+        tous[i].dossier = dossier
+        enregistrer()
     }
 
     // MARK: - Modifications
@@ -247,9 +315,19 @@ final class Bibliotheque {
     // MARK: - Persistance
 
     private func charger() {
+        if let data = try? Data(contentsOf: fichierDossiers),
+           let liste = try? JSONDecoder().decode([Dossier].self, from: data) {
+            dossiers = liste
+        }
         guard let data = try? Data(contentsOf: fichierIndex),
               let liste = try? JSONDecoder().decode([Media].self, from: data) else { return }
         tous = liste.filter { FileManager.default.fileExists(atPath: url(de: $0).path) }
+    }
+
+    private func enregistrerDossiers() {
+        if let data = try? JSONEncoder().encode(dossiers) {
+            try? data.write(to: fichierDossiers, options: .atomic)
+        }
     }
 
     private func enregistrer() {

@@ -9,8 +9,15 @@ struct ElaraApp: App {
 
     init() {
         UserDefaults.standard.register(defaults: [
-            "reprendreLecture": true,
-            "modeLectureAuto": ModeLectureAuto.arreter.rawValue
+            Cle.reprendreLecture: true,
+            Cle.modeLectureAuto: ModeLectureAuto.arreter.rawValue,
+            Cle.pauseArrierePlan: false,
+            Cle.imageDansImage: true,
+            Cle.rotationPaysage: false,
+            Cle.airplay: true,
+            Cle.gesteLuminosite: true,
+            Cle.gesteVolume: true,
+            Cle.verrouApp: false
         ])
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
 
@@ -34,6 +41,20 @@ struct RacineView: View {
     @Environment(LecteurController.self) private var lecteur
     @Environment(Coffre.self) private var coffre
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(Cle.theme) private var theme: ThemeApp = .systeme
+    @AppStorage(Cle.verrouApp) private var verrouApp = false
+    @State private var verrouOuverture = Coffre()
+    @State private var demandeEnCours = false
+
+    private var schema: ColorScheme? {
+        switch theme {
+        case .systeme: nil
+        case .clair: .light
+        case .sombre: .dark
+        }
+    }
+
+    private var appVerrouillee: Bool { verrouApp && !verrouOuverture.estDeverrouille }
 
     var body: some View {
         @Bindable var lecteur = lecteur
@@ -51,8 +72,10 @@ struct RacineView: View {
             LecteurView()
         }
         .overlay {
-            // Cache le contenu privé dans le sélecteur d'apps
-            if coffre.estDeverrouille && scenePhase != .active {
+            if appVerrouillee {
+                EcranVerrouApp(verrou: verrouOuverture) { await deverrouillerApp() }
+            } else if coffre.estDeverrouille && scenePhase != .active {
+                // Cache le contenu privé dans le sélecteur d'apps
                 ZStack {
                     Rectangle().fill(.ultraThinMaterial)
                     Image(systemName: "lock.fill")
@@ -62,11 +85,65 @@ struct RacineView: View {
                 .ignoresSafeArea()
             }
         }
+        .preferredColorScheme(schema)
+        .task { if appVerrouillee { await deverrouillerApp() } }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { lecteur.sauverPosition() }
             if phase == .background {
                 coffre.verrouiller()
-                if lecteur.mediaActuel?.estPrive == true { lecteur.fermer() }
+                verrouOuverture.verrouiller()
+                if lecteur.mediaActuel?.estPrive == true {
+                    lecteur.fermer()
+                } else if Cle.booleen(Cle.pauseArrierePlan, defaut: false) {
+                    lecteur.player.pause()
+                }
+            }
+            if phase == .active && appVerrouillee {
+                Task { await deverrouillerApp() }
+            }
+        }
+    }
+
+    private func deverrouillerApp() async {
+        guard !demandeEnCours else { return }
+        demandeEnCours = true
+        await verrouOuverture.deverrouiller(raison: String(localized: "Déverrouiller Elara"))
+        demandeEnCours = false
+    }
+}
+
+/// Écran affiché quand « Verrouiller Elara » est activé dans les Réglages.
+struct EcranVerrouApp: View {
+    let verrou: Coffre
+    let deverrouiller: () async -> Void
+
+    var body: some View {
+        ZStack {
+            Theme.degrade.ignoresSafeArea()
+            VStack(spacing: 20) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(.white)
+                Text("Elara est verrouillée")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                Button {
+                    Task { await deverrouiller() }
+                } label: {
+                    Label("Déverrouiller avec \(verrou.nomBiometrie)", systemImage: "faceid")
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.white)
+                .foregroundStyle(Theme.accent)
+                if let erreur = verrou.erreur {
+                    Text(erreur)
+                        .font(.footnote)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
             }
         }
     }

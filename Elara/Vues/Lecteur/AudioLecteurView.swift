@@ -69,7 +69,7 @@ struct AudioLecteurView: View {
                         .font(.system(size: 76))
                         .foregroundStyle(Theme.accent)
                 }
-                .accessibilityLabel(lecteur.enLecture ? "Pause" : "Lecture")
+                .accessibilityLabel(lecteur.enLecture ? LocalizedStringKey("Pause") : LocalizedStringKey("Lecture"))
 
                 Button { lecteur.suivant() } label: {
                     Image(systemName: "forward.fill").font(.title)

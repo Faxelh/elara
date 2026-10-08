@@ -30,7 +30,7 @@ targets:
       properties:
         CFBundleDisplayName: Elara
         CFBundleDevelopmentRegion: fr
-        CFBundleLocalizations: [fr]
+        CFBundleLocalizations: [fr, en, ru]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -39,6 +39,12 @@ targets:
         LSSupportsOpeningDocumentsInPlace: true
         ITSAppUsesNonExemptEncryption: false
         NSFaceIDUsageDescription: Elara utilise Face ID pour protéger votre dossier privé.
+        NSPhotoLibraryUsageDescription: Elara accède à vos vidéos pour les compresser et les importer.
+        NSPhotoLibraryAddUsageDescription: Elara enregistre les vidéos compressées dans votre photothèque.
+        NSLocalNetworkUsageDescription: Elara utilise le réseau local pour échanger des fichiers avec les appareils à proximité et votre ordinateur.
+        NSBonjourServices:
+          - _elara-tr._tcp
+          - _elara-tr._udp
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft

@@ -108,6 +108,7 @@ final class LecteurController {
         guard let enFile = mediaActuel else { return }
         let media = bibliotheque.media(id: enFile.id) ?? enFile
         player.replaceCurrentItem(with: AVPlayerItem(url: bibliotheque.url(de: media)))
+        player.allowsExternalPlayback = Cle.booleen(Cle.airplay, defaut: true)
         dureeTotale = media.duree
         tempsActuel = 0
 

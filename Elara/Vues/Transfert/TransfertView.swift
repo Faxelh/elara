@@ -1,14 +1,251 @@
 import SwiftUI
+import MultipeerConnectivity
 
 struct TransfertView: View {
+    @Environment(Bibliotheque.self) private var bib
+    @State private var mode = 0
+    @State private var transfert = Transfert()
+    @State private var serveur = ServeurWifi()
+    @State private var destinataire: MCPeerID?
+
     var body: some View {
         NavigationStack {
-            ContentUnavailableView(
-                "Transfert Wi‑Fi",
-                systemImage: "wifi",
-                description: Text("Envoyez vos vidéos et musiques vers un autre appareil sur le même réseau Wi‑Fi. Disponible dans une prochaine version.")
-            )
+            VStack(spacing: 0) {
+                Picker("Mode", selection: $mode) {
+                    Text("iPhone à proximité").tag(0)
+                    Text("Ordinateur").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+
+                if mode == 0 { radar } else { ordinateur }
+            }
             .navigationTitle("Transfert")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                transfert.bibliotheque = bib
+                serveur.bibliotheque = bib
+                if mode == 0 { transfert.demarrer() }
+            }
+            .onDisappear {
+                transfert.arreter()
+            }
+            .onChange(of: mode) { _, nouveau in
+                if nouveau == 0 { transfert.demarrer() } else { transfert.arreter() }
+            }
+            .sheet(item: Binding(
+                get: { destinataire.map { Destinataire(appareil: $0) } },
+                set: { destinataire = $0?.appareil }
+            )) { cible in
+                ChoixMediasView(appareil: cible.appareil) { selection in
+                    Task { await transfert.envoyer(selection, a: cible.appareil) }
+                }
+            }
+            .alert(
+                "Demande de connexion",
+                isPresented: Binding(get: { transfert.invitation != nil }, set: { if !$0 { transfert.invitation = nil } }),
+                presenting: transfert.invitation
+            ) { invitation in
+                Button("Refuser", role: .cancel) { transfert.accepter(invitation, false) }
+                Button("Accepter") { transfert.accepter(invitation, true) }
+            } message: { invitation in
+                Text("« \(invitation.appareil.displayName) » veut échanger des fichiers avec vous.")
+            }
+        }
+    }
+
+    // MARK: - Radar (iPhone ↔ iPhone)
+
+    private var radar: some View {
+        VStack(spacing: 16) {
+            GeometryReader { geo in
+                let taille = min(geo.size.width, geo.size.height)
+                let centre = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+                ZStack {
+                    ForEach(1..<4) { i in
+                        Circle()
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 2)
+                            .frame(width: taille * CGFloat(i) / 3.2, height: taille * CGFloat(i) / 3.2)
+                    }
+                    Circle()
+                        .fill(Theme.accent.opacity(0.08))
+                        .frame(width: taille * 0.9, height: taille * 0.9)
+                        .scaleEffect(transfert.actif ? 1 : 0.4)
+                        .opacity(transfert.actif ? 0 : 1)
+                        .animation(.easeOut(duration: 2.2).repeatForever(autoreverses: false), value: transfert.actif)
+
+                    Avatar(nom: transfert.monAppareil.displayName, icone: "iphone", couleur: Theme.accent, etat: nil)
+                        .position(centre)
+
+                    ForEach(Array(transfert.appareils.enumerated()), id: \.element) { index, appareil in
+                        let angle = Double(index) / Double(max(transfert.appareils.count, 1)) * 2 * .pi - .pi / 2
+                        let rayon = taille * 0.34
+                        Button {
+                            if transfert.estConnecte(appareil) {
+                                destinataire = appareil
+                            } else {
+                                transfert.inviter(appareil)
+                            }
+                        } label: {
+                            Avatar(
+                                nom: appareil.displayName,
+                                icone: "iphone.gen3",
+                                couleur: transfert.estConnecte(appareil) ? Theme.vert : Theme.bleu,
+                                etat: transfert.estConnecte(appareil)
+                                    ? String(localized: "Connecté")
+                                    : (transfert.enConnexion.contains(appareil) ? String(localized: "Connexion…") : nil)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .position(x: centre.x + rayon * cos(angle), y: centre.y + rayon * sin(angle))
+                    }
+                }
+            }
+            .frame(maxHeight: 420)
+
+            if let progression = transfert.progression {
+                ProgressView(value: progression).padding(.horizontal, 32)
+            }
+            if let message = transfert.message {
+                Text(message)
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
+            Text(transfert.appareils.isEmpty
+                 ? LocalizedStringKey("Ouvrez Elara sur l'onglet Transfert de l'autre iPhone. Wi‑Fi et Bluetooth doivent être activés.")
+                 : LocalizedStringKey("Touchez un appareil pour vous connecter, puis touchez-le à nouveau pour envoyer des fichiers."))
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color(.secondarySystemBackground), in: Capsule())
+                .padding(.horizontal)
+                .padding(.bottom, 12)
+        }
+    }
+
+    // MARK: - Ordinateur (navigateur web)
+
+    private var ordinateur: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                Image(systemName: serveur.actif ? "wifi" : "wifi.slash")
+                    .font(.system(size: 64))
+                    .foregroundStyle(serveur.actif ? Theme.vert : .secondary)
+                    .padding(.top, 30)
+
+                if serveur.actif, let adresse = serveur.adresse {
+                    Text("Sur votre ordinateur, connecté au même Wi‑Fi, ouvrez le navigateur et tapez :")
+                        .multilineTextAlignment(.center)
+                    Text(adresse)
+                        .font(.title2.monospaced().bold())
+                        .textSelection(.enabled)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Theme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+                    Text("Vous pourrez y déposer des vidéos et musiques, ou télécharger celles d'Elara. Gardez Elara ouverte pendant le transfert.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    if let dernier = serveur.dernierFichier {
+                        Label("Reçu : \(dernier)", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                    Button("Arrêter", role: .destructive) { serveur.arreter() }
+                        .buttonStyle(.bordered)
+                } else {
+                    Text("Transférez des fichiers entre votre ordinateur et Elara par le Wi‑Fi, sans câble.")
+                        .multilineTextAlignment(.center)
+                    Button {
+                        serveur.demarrer()
+                    } label: {
+                        Label("Démarrer", systemImage: "play.fill")
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                if let message = serveur.message {
+                    Text(message).font(.footnote).foregroundStyle(.red).multilineTextAlignment(.center)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+private struct Destinataire: Identifiable {
+    let appareil: MCPeerID
+    var id: MCPeerID { appareil }
+}
+
+struct Avatar: View {
+    let nom: String
+    let icone: String
+    let couleur: Color
+    let etat: String?
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: icone)
+                .font(.system(size: 30))
+                .foregroundStyle(.white)
+                .frame(width: 72, height: 72)
+                .background(couleur.gradient, in: Circle())
+                .overlay(Circle().stroke(.white, lineWidth: 3))
+                .shadow(color: couleur.opacity(0.35), radius: 10, y: 4)
+            Text(nom).font(.caption.weight(.semibold)).lineLimit(1).frame(maxWidth: 110)
+            if let etat {
+                Text(etat).font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// Choix des médias à envoyer à un autre iPhone.
+struct ChoixMediasView: View {
+    let appareil: MCPeerID
+    let envoyer: ([Media]) -> Void
+
+    @Environment(Bibliotheque.self) private var bib
+    @Environment(\.dismiss) private var fermer
+    @State private var choisis = Set<UUID>()
+
+    var body: some View {
+        NavigationStack {
+            List(bib.medias) { media in
+                Button {
+                    if choisis.contains(media.id) { choisis.remove(media.id) } else { choisis.insert(media.id) }
+                } label: {
+                    HStack {
+                        Image(systemName: choisis.contains(media.id) ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(choisis.contains(media.id) ? Theme.accent : .secondary)
+                        LigneMedia(media: media)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            .overlay {
+                if bib.medias.isEmpty {
+                    ContentUnavailableView("Aucun média", systemImage: "shippingbox")
+                }
+            }
+            .navigationTitle("Envoyer à \(appareil.displayName)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { fermer() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Envoyer (\(choisis.count))") {
+                        envoyer(bib.medias.filter { choisis.contains($0.id) })
+                        fermer()
+                    }
+                    .disabled(choisis.isEmpty)
+                }
+            }
         }
     }
 }

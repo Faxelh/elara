@@ -1,0 +1,5 @@
+"CFBundleDisplayName" = "Elara";
+"NSFaceIDUsageDescription" = "Elara использует Face ID для защиты личной папки.";
+"NSPhotoLibraryUsageDescription" = "Elara использует доступ к видео, чтобы сжимать и импортировать их.";
+"NSPhotoLibraryAddUsageDescription" = "Elara сохраняет сжатые видео в вашу медиатеку.";
+"NSLocalNetworkUsageDescription" = "Elara использует локальную сеть для обмена файлами с устройствами рядом и компьютером.";
