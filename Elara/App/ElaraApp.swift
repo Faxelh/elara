@@ -20,6 +20,8 @@ struct ElaraApp: App {
             Cle.verrouApp: false
         ])
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+        let langue = LangueApp.actuelle
+        Langue.activer(langue == .systeme ? nil : langue.rawValue)
 
         let bib = Bibliotheque()
         _bibliotheque = State(initialValue: bib)
@@ -38,11 +40,16 @@ struct ElaraApp: App {
 }
 
 struct RacineView: View {
+    @Environment(Bibliotheque.self) private var bib
     @Environment(LecteurController.self) private var lecteur
     @Environment(Coffre.self) private var coffre
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(Cle.theme) private var theme: ThemeApp = .systeme
     @AppStorage(Cle.verrouApp) private var verrouApp = false
+    /// Change dès qu'une langue est choisie : les onglets sont alors redessinés dans la nouvelle langue.
+    @AppStorage("langueChoisie") private var langueChoisie = "systeme"
+    @State private var onglet = 0
+    @State private var lienPartage: LienPartage?
     @State private var verrouOuverture = Coffre()
     @State private var demandeEnCours = false
 
@@ -58,15 +65,27 @@ struct RacineView: View {
 
     var body: some View {
         @Bindable var lecteur = lecteur
-        TabView {
+        TabView(selection: $onglet) {
             AccueilView()
                 .tabItem { Label("Accueil", systemImage: "house.fill") }
+                .tag(0)
             TransfertView()
                 .tabItem { Label("Transfert", systemImage: "arrow.up.arrow.down.circle.fill") }
+                .tag(1)
             CompresserView()
                 .tabItem { Label("Compresser", systemImage: "rectangle.compress.vertical") }
+                .tag(2)
             ReglagesView()
                 .tabItem { Label("Réglages", systemImage: "gearshape.fill") }
+                .tag(3)
+        }
+        .id(langueChoisie)
+        .environment(\.locale, Langue.locale)
+        .onOpenURL { url in
+            Task { await ouvrir(url) }
+        }
+        .sheet(item: $lienPartage) { partage in
+            TelechargerView(lienInitial: partage.lien, demarrerSeul: true)
         }
         .fullScreenCover(isPresented: $lecteur.estAffiche) {
             LecteurView()
@@ -104,12 +123,37 @@ struct RacineView: View {
         }
     }
 
+    /// Fichier ouvert avec « Ouvrir dans Elara » / « Copier dans Elara »,
+    /// ou lien elara://telecharger?lien=… (raccourci « Partager vers Elara »).
+    private func ouvrir(_ url: URL) async {
+        if url.isFileURL {
+            onglet = 0
+            // Les fichiers reçus d'une autre app arrivent dans Documents/Inbox : on les déplace.
+            let boiteReception = url.path.contains("/Documents/Inbox/")
+            bib.importEnCours = true
+            _ = await bib.importer(depuis: url, deplacer: boiteReception)
+            bib.importEnCours = false
+            return
+        }
+        guard url.scheme?.lowercased() == "elara",
+              let composants = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        let lien = composants.queryItems?.first { $0.name == "lien" || $0.name == "url" }?.value ?? ""
+        guard !lien.isEmpty else { return }
+        onglet = 0
+        lienPartage = LienPartage(lien: lien)
+    }
+
     private func deverrouillerApp() async {
         guard !demandeEnCours else { return }
         demandeEnCours = true
         await verrouOuverture.deverrouiller(raison: String(localized: "Déverrouiller Elara"))
         demandeEnCours = false
     }
+}
+
+struct LienPartage: Identifiable {
+    let id = UUID()
+    let lien: String
 }
 
 /// Écran affiché quand « Verrouiller Elara » est activé dans les Réglages.

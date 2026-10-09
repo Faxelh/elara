@@ -223,3 +223,18 @@
 "Démarrer" = "Начать";
 "Envoyer à %@" = "Отправить на %@";
 "Envoyer (%lld)" = "Отправить (%lld)";
+
+/* Version perso : Facebook */
+"Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook publique." = "Вставьте прямую ссылку на видео- или аудиофайл (mp4, mov, mp3, m4a…) или ссылку на публичное видео Facebook.";
+"Compte Facebook" = "Аккаунт Facebook";
+"Facultatif : connectez-vous pour télécharger les vidéos visibles seulement par vos amis ou dans vos groupes." = "Необязательно: войдите, чтобы скачивать видео, доступные только друзьям или в ваших группах.";
+"Recherche de la vidéo…" = "Поиск видео…";
+"Se déconnecter" = "Выйти";
+"Facebook" = "Facebook";
+"Vidéo Facebook introuvable. Elle est peut-être privée ou réservée aux membres : connectez-vous à Facebook dans Elara puis réessayez." = "Видео Facebook не найдено. Возможно, оно закрыто или доступно только участникам: войдите в Facebook в Elara и повторите попытку.";
+
+/* Partage vers Elara */
+"Importer un enregistrement d'écran" = "Импортировать запись экрана";
+"Un lien est copié" = "Ссылка скопирована";
+"Le télécharger dans Elara ?" = "Скачать в Elara?";
+"Ignorer" = "Скрыть";

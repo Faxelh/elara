@@ -223,3 +223,18 @@
 "Démarrer" = "Démarrer";
 "Envoyer à %@" = "Envoyer à %@";
 "Envoyer (%lld)" = "Envoyer (%lld)";
+
+/* Version perso : Facebook */
+"Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook publique." = "Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook publique.";
+"Compte Facebook" = "Compte Facebook";
+"Facultatif : connectez-vous pour télécharger les vidéos visibles seulement par vos amis ou dans vos groupes." = "Facultatif : connectez-vous pour télécharger les vidéos visibles seulement par vos amis ou dans vos groupes.";
+"Recherche de la vidéo…" = "Recherche de la vidéo…";
+"Se déconnecter" = "Se déconnecter";
+"Facebook" = "Facebook";
+"Vidéo Facebook introuvable. Elle est peut-être privée ou réservée aux membres : connectez-vous à Facebook dans Elara puis réessayez." = "Vidéo Facebook introuvable. Elle est peut-être privée ou réservée aux membres : connectez-vous à Facebook dans Elara puis réessayez.";
+
+/* Partage vers Elara */
+"Importer un enregistrement d'écran" = "Importer un enregistrement d'écran";
+"Un lien est copié" = "Un lien est copié";
+"Le télécharger dans Elara ?" = "Le télécharger dans Elara ?";
+"Ignorer" = "Ignorer";

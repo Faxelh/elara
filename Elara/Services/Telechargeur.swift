@@ -10,9 +10,18 @@ final class Telechargeur {
     private(set) var enCours = false
     private(set) var progression: Double = 0
     private(set) var octetsRecus: Int64 = 0
+    /// Vrai pendant la recherche de la vidéo sur la page (liens Facebook, version perso).
+    private(set) var recherche = false
     var erreur: String?
 
     @ObservationIgnored private var tache: URLSessionDownloadTask?
+    @ObservationIgnored private var annule = false
+
+    #if PERSO
+    static let gereFacebook = true
+    #else
+    static let gereFacebook = false
+    #endif
 
     static let domainesRefuses = [
         "youtube.com", "youtu.be", "tiktok.com", "instagram.com", "facebook.com", "fb.watch",
@@ -22,6 +31,7 @@ final class Telechargeur {
 
     func telecharger(_ texte: String, vers bib: Bibliotheque, prive: Bool) async -> Media? {
         erreur = nil
+        annule = false
         let propre = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: propre),
               let schema = url.scheme?.lowercased(), schema == "http" || schema == "https",
@@ -29,7 +39,13 @@ final class Telechargeur {
             erreur = String(localized: "Lien invalide : il doit commencer par http:// ou https://")
             return nil
         }
-        if Self.domainesRefuses.contains(where: { hote == $0 || hote.hasSuffix("." + $0) }) {
+        var nomForce: String?
+        #if PERSO
+        let estFacebook = ExtracteurFacebook.gere(hote)
+        #else
+        let estFacebook = false
+        #endif
+        if !estFacebook, Self.domainesRefuses.contains(where: { hote == $0 || hote.hasSuffix("." + $0) }) {
             erreur = String(localized: "Elara ne télécharge pas depuis les réseaux sociaux ni les plateformes de streaming. Utilisez un lien direct vers un fichier vidéo ou audio.")
             return nil
         }
@@ -39,11 +55,25 @@ final class Telechargeur {
         octetsRecus = 0
         defer {
             enCours = false
+            recherche = false
             tache = nil
         }
 
         do {
-            let fichier: URL = try await withCheckedThrowingContinuation { suite in
+            var url = url
+            #if PERSO
+            if estFacebook {
+                recherche = true
+                url = try await ExtracteurFacebook.lienVideo(depuis: url)
+                recherche = false
+                let format = DateFormatter()
+                format.dateFormat = "yyyy-MM-dd HH'h'mm"
+                nomForce = "Facebook " + format.string(from: Date()) + ".mp4"
+            }
+            #endif
+            if Task.isCancelled || annule { throw URLError(.cancelled) }
+            let lienFinal = url
+            let recu: URL = try await withCheckedThrowingContinuation { suite in
                 let delegue = DelegueTelechargement(
                     surProgres: { [weak self] p, o in
                         Task { @MainActor in
@@ -54,10 +84,15 @@ final class Telechargeur {
                     surFin: { resultat in suite.resume(with: resultat) }
                 )
                 let session = URLSession(configuration: .default, delegate: delegue, delegateQueue: nil)
-                let t = session.downloadTask(with: url)
+                let t = session.downloadTask(with: lienFinal)
                 tache = t
                 t.resume()
                 session.finishTasksAndInvalidate()
+            }
+            var fichier = recu
+            if let nomForce {
+                let renomme = fichier.deletingLastPathComponent().appendingPathComponent(nomForce)
+                if (try? FileManager.default.moveItem(at: fichier, to: renomme)) != nil { fichier = renomme }
             }
             guard Bibliotheque.type(pour: fichier.pathExtension) != nil else {
                 try? FileManager.default.removeItem(at: fichier)
@@ -80,6 +115,7 @@ final class Telechargeur {
     }
 
     func annuler() {
+        annule = true
         tache?.cancel()
     }
 }

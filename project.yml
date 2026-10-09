@@ -30,7 +30,7 @@ targets:
       properties:
         CFBundleDisplayName: Elara
         CFBundleDevelopmentRegion: fr
-        CFBundleLocalizations: [fr, en, ru]
+        CFBundleLocalizations: [fr, en, ru, es]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -45,6 +45,16 @@ targets:
         NSBonjourServices:
           - _elara-tr._tcp
           - _elara-tr._udp
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Vidéo
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.movie, public.video, public.mpeg-4, com.apple.quicktime-movie, com.apple.m4v-video]
+          - CFBundleTypeName: Audio
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.audio, public.mp3, public.mpeg-4-audio]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.kounandi.elara
+            CFBundleURLSchemes: [elara]
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft

@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 struct ImportMedias: ViewModifier {
     @Binding var photos: Bool
     @Binding var fichiers: Bool
+    @Binding var ecran: Bool
     var dossier: UUID?
 
     @Environment(Bibliotheque.self) private var bib
@@ -18,6 +19,13 @@ struct ImportMedias: ViewModifier {
                 selection: $selection,
                 maxSelectionCount: 20,
                 matching: .videos,
+                preferredItemEncoding: .current
+            )
+            .photosPicker(
+                isPresented: $ecran,
+                selection: $selection,
+                maxSelectionCount: 20,
+                matching: .screenRecordings,
                 preferredItemEncoding: .current
             )
             .onChange(of: selection) { _, elements in
@@ -49,8 +57,9 @@ struct ImportMedias: ViewModifier {
 }
 
 extension View {
-    func importMedias(photos: Binding<Bool>, fichiers: Binding<Bool>, dossier: UUID? = nil) -> some View {
-        modifier(ImportMedias(photos: photos, fichiers: fichiers, dossier: dossier))
+    func importMedias(photos: Binding<Bool>, fichiers: Binding<Bool>,
+                      ecran: Binding<Bool> = .constant(false), dossier: UUID? = nil) -> some View {
+        modifier(ImportMedias(photos: photos, fichiers: fichiers, ecran: ecran, dossier: dossier))
     }
 }
 

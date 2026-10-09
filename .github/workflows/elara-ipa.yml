@@ -1,5 +1,8 @@
 # Compile Elara et produit Elara.ipa (non signé) sur les Mac gratuits de GitHub.
 # À installer ensuite avec Sideloadly ou 3uTools.
+# Version PERSO : inclut le téléchargement des vidéos Facebook.
+# Ne PAS envoyer cette version sur l'App Store (Apple la refuserait) :
+# la version App Store est compilée sans « PERSO » (workflow Codemagic elara-testflight).
 name: Elara – IPA
 
 on:
@@ -38,7 +41,8 @@ jobs:
             -derivedDataPath build/derived \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" > build/xcodebuild.log 2>&1
+            CODE_SIGN_IDENTITY="" \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS=PERSO > build/xcodebuild.log 2>&1
           statut=$?
           set -e
           grep -E "error:|\*\* BUILD" build/xcodebuild.log || true
@@ -59,7 +63,7 @@ jobs:
       - name: Mettre Elara.ipa à disposition
         uses: actions/upload-artifact@v4
         with:
-          name: Elara-ipa
+          name: Elara-ipa-perso
           path: build/ipa/Elara.ipa
           retention-days: 14
 

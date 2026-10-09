@@ -91,7 +91,7 @@ struct ReglagesView: View {
 // MARK: - Général
 
 enum LangueApp: String, CaseIterable, Identifiable {
-    case systeme, fr, en, ru
+    case systeme, fr, en, ru, es
     var id: String { rawValue }
 
     var titre: String {
@@ -100,6 +100,7 @@ enum LangueApp: String, CaseIterable, Identifiable {
         case .fr: "Français"
         case .en: "English"
         case .ru: "Русский"
+        case .es: "Español"
         }
     }
 
@@ -108,13 +109,19 @@ enum LangueApp: String, CaseIterable, Identifiable {
         return LangueApp(rawValue: choix) ?? .systeme
     }
 
+    /// Change la langue tout de suite (et pour les prochains lancements).
     func appliquer() {
         let d = UserDefaults.standard
         if self == .systeme {
             d.removeObject(forKey: "AppleLanguages")
-            d.removeObject(forKey: "langueChoisie")
         } else {
             d.set([rawValue], forKey: "AppleLanguages")
+        }
+        Langue.activer(self == .systeme ? nil : rawValue)
+        // Modifié en dernier : redessine l'app dans la nouvelle langue.
+        if self == .systeme {
+            d.removeObject(forKey: "langueChoisie")
+        } else {
             d.set(rawValue, forKey: "langueChoisie")
         }
     }
@@ -124,7 +131,6 @@ struct ReglagesGenerauxView: View {
     @AppStorage(Cle.theme) private var theme: ThemeApp = .systeme
     @AppStorage(Cle.vueAccueil) private var vue: VueAccueil = .grille
     @State private var langue = LangueApp.actuelle
-    @State private var redemarrer = false
 
     var body: some View {
         Form {
@@ -134,10 +140,7 @@ struct ReglagesGenerauxView: View {
                 }
                 .onChange(of: langue) { _, nouvelle in
                     nouvelle.appliquer()
-                    redemarrer = true
                 }
-            } footer: {
-                Text("La nouvelle langue s'applique au prochain lancement d'Elara.")
             }
             Section("Affichage") {
                 Picker("Thème", selection: $theme) {
@@ -150,11 +153,6 @@ struct ReglagesGenerauxView: View {
         }
         .navigationTitle("Général")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Langue modifiée", isPresented: $redemarrer) {
-            Button("OK") {}
-        } message: {
-            Text("Fermez complètement Elara (balayez-la vers le haut dans le sélecteur d'apps) puis rouvrez-la.")
-        }
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AccueilView: View {
     @Environment(Bibliotheque.self) private var bib
@@ -10,7 +11,11 @@ struct AccueilView: View {
     @State private var afficherFichiers = false
     @State private var afficherPrive = false
     @State private var afficherTelechargement = false
+    @State private var afficherEcran = false
     @State private var nouveauDossier = false
+    @State private var lienInitial = ""
+    @State private var lienCopie = false
+    @AppStorage("presse-papiers-vu") private var pressePapiersVu = 0
     @State private var filtre: Filtre = .tout
 
     enum Filtre: String, CaseIterable, Identifiable {
@@ -33,6 +38,21 @@ struct AccueilView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if lienCopie {
+                        BandeauLienCopie(
+                            telecharger: {
+                                lienInitial = UIPasteboard.general.url?.absoluteString
+                                    ?? UIPasteboard.general.string ?? ""
+                                pressePapiersVu = UIPasteboard.general.changeCount
+                                lienCopie = false
+                                afficherTelechargement = true
+                            },
+                            ignorer: {
+                                pressePapiersVu = UIPasteboard.general.changeCount
+                                lienCopie = false
+                            }
+                        )
+                    }
                     HStack(spacing: 12) {
                         CarteRaccourci(titre: "Photos", icone: "photo.on.rectangle.angled", couleur: Theme.bleu) {
                             afficherPhotos = true
@@ -87,7 +107,11 @@ struct AccueilView: View {
                     Menu {
                         Button("Importer depuis Photos", systemImage: "photo") { afficherPhotos = true }
                         Button("Importer depuis Fichiers", systemImage: "folder") { afficherFichiers = true }
+                        Button("Importer un enregistrement d'écran", systemImage: "record.circle") {
+                            afficherEcran = true
+                        }
                         Button("Télécharger depuis un lien", systemImage: "arrow.down.circle") {
+                            lienInitial = ""
                             afficherTelechargement = true
                         }
                         Divider()
@@ -107,9 +131,13 @@ struct AccueilView: View {
             .navigationDestination(isPresented: $afficherPrive) {
                 CoffreView()
             }
-            .importMedias(photos: $afficherPhotos, fichiers: $afficherFichiers)
+            .importMedias(photos: $afficherPhotos, fichiers: $afficherFichiers, ecran: $afficherEcran)
             .sheet(isPresented: $afficherTelechargement) {
-                TelechargerView()
+                TelechargerView(lienInitial: lienInitial, demarrerSeul: !lienInitial.isEmpty)
+            }
+            .onAppear(perform: verifierPressePapiers)
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                verifierPressePapiers()
             }
             .alerteDossier($nouveauDossier) { nom in
                 bib.creerDossier(nom)
@@ -117,6 +145,44 @@ struct AccueilView: View {
             .refreshable { await bib.synchroniserDossier() }
             .task { await bib.synchroniserDossier() }
         }
+    }
+}
+
+extension AccueilView {
+    /// Propose de télécharger un lien copié (sans lire le presse-papiers, donc sans alerte iOS).
+    private func verifierPressePapiers() {
+        let pp = UIPasteboard.general
+        lienCopie = pp.hasURLs && pp.changeCount != pressePapiersVu
+    }
+}
+
+/// Bandeau « Un lien est copié ».
+struct BandeauLienCopie: View {
+    let telecharger: () -> Void
+    let ignorer: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "link.circle.fill")
+                .font(.title2)
+                .foregroundStyle(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Un lien est copié").font(.subheadline.bold())
+                Text("Le télécharger dans Elara ?").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Button("Télécharger", action: telecharger)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            Button(action: ignorer) {
+                Image(systemName: "xmark").font(.caption.bold())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("Ignorer")
+        }
+        .padding(12)
+        .background(Theme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
