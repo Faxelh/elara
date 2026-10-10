@@ -14,17 +14,11 @@ private struct Saut: Equatable, Identifiable {
     let droite: Bool
 }
 
-/// Pont entre l'écran et la vue vidéo UIKit (image dans l'image, remplissage).
+/// Réglage partagé entre l'écran et la vue vidéo UIKit (remplissage de l'écran).
 @MainActor
 @Observable
 final class PontVideo {
     var remplir = false
-    @ObservationIgnored var pip: AVPictureInPictureController?
-
-    func basculerPip() {
-        guard let pip else { return }
-        if pip.isPictureInPictureActive { pip.stopPictureInPicture() } else { pip.startPictureInPicture() }
-    }
 }
 
 struct LecteurView: View {
@@ -273,7 +267,7 @@ struct LecteurView: View {
 
                 if pipDisponible {
                     Button {
-                        pont.basculerPip()
+                        lecteur.basculerPip()
                     } label: {
                         pastille { Image(systemName: "pip.enter") }
                     }
@@ -430,12 +424,6 @@ struct VideoElara: UIViewRepresentable {
         volume.alpha = 0.01
         vue.addSubview(volume)
         c.vueVolume = volume
-
-        if AVPictureInPictureController.isPictureInPictureSupported(), Cle.booleen(Cle.imageDansImage, defaut: true) {
-            let pip = AVPictureInPictureController(playerLayer: vue.couche)
-            pip?.canStartPictureInPictureAutomaticallyFromInline = true
-            pont.pip = pip
-        }
         return vue
     }
 
