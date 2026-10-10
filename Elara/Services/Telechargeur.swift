@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import Observation
 
 /// Télécharge un fichier vidéo ou audio depuis un lien direct (http/https).
@@ -78,22 +79,7 @@ final class Telechargeur {
             #endif
             if Task.isCancelled || annule { throw URLError(.cancelled) }
             let lienFinal = url
-            let recu: URL = try await withCheckedThrowingContinuation { suite in
-                let delegue = DelegueTelechargement(
-                    surProgres: { [weak self] p, o in
-                        Task { @MainActor in
-                            self?.progression = p
-                            self?.octetsRecus = o
-                        }
-                    },
-                    surFin: { resultat in suite.resume(with: resultat) }
-                )
-                let session = URLSession(configuration: .default, delegate: delegue, delegateQueue: nil)
-                let t = session.downloadTask(with: lienFinal)
-                tache = t
-                t.resume()
-                session.finishTasksAndInvalidate()
-            }
+            let recu = try await telechargerBrut(lienFinal)
             var fichier = recu
             if let nomForce {
                 let renomme = fichier.deletingLastPathComponent().appendingPathComponent(nomForce)
@@ -118,6 +104,125 @@ final class Telechargeur {
         }
         return nil
     }
+
+    /// Télécharge un fichier dans un dossier temporaire et renvoie son emplacement.
+    private func telechargerBrut(_ lien: URL, base: Double = 0, part: Double = 1) async throws -> URL {
+        try await withCheckedThrowingContinuation { suite in
+            let delegue = DelegueTelechargement(
+                surProgres: { [weak self] p, o in
+                    Task { @MainActor in
+                        self?.progression = base + p * part
+                        self?.octetsRecus = o
+                    }
+                },
+                surFin: { resultat in suite.resume(with: resultat) }
+            )
+            let session = URLSession(configuration: .default, delegate: delegue, delegateQueue: nil)
+            let t = session.downloadTask(with: lien)
+            tache = t
+            t.resume()
+            session.finishTasksAndInvalidate()
+        }
+    }
+
+    #if PERSO
+    /// Reels : l'image et le son sont souvent deux fichiers. On télécharge les derniers fichiers vus,
+    /// on repère ceux qui contiennent l'image et le son, puis on les assemble.
+    func telechargerFlux(_ candidats: [URL], vers bib: Bibliotheque, prive: Bool) async -> Media? {
+        erreur = nil
+        annule = false
+        enCours = true
+        progression = 0
+        octetsRecus = 0
+        defer { enCours = false; recherche = false; tache = nil }
+        var videoSeule: URL?
+        var audioSeul: URL?
+        var complet: URL?
+        do {
+            for (rang, lien) in candidats.enumerated() {
+                if Task.isCancelled || annule { throw URLError(.cancelled) }
+                let part = 1.0 / Double(max(candidats.count, 1))
+                let fichier = try await telechargerBrut(lien, base: Double(rang) * part, part: part)
+                let (avecImage, avecSon) = await Self.pistes(de: fichier)
+                if avecImage && avecSon { complet = fichier; break }
+                if avecImage, videoSeule == nil { videoSeule = fichier }
+                else if avecSon, audioSeul == nil { audioSeul = fichier }
+                if videoSeule != nil && audioSeul != nil { break }
+            }
+            var final = complet ?? videoSeule
+            if complet == nil, let v = videoSeule, let a = audioSeul {
+                final = (try? await Self.assembler(video: v, audio: a)) ?? v
+            }
+            guard var fichier = final else {
+                erreur = String(localized: "Le fichier téléchargé n'a pas pu être ajouté.")
+                return nil
+            }
+            let format = DateFormatter()
+            format.dateFormat = "yyyy-MM-dd HH'h'mm"
+            let renomme = fichier.deletingLastPathComponent()
+                .appendingPathComponent("Facebook " + format.string(from: Date()) + ".mp4")
+            try? FileManager.default.removeItem(at: renomme)
+            if (try? FileManager.default.moveItem(at: fichier, to: renomme)) != nil { fichier = renomme }
+            guard let media = await bib.importer(depuis: fichier, deplacer: true, prive: prive) else {
+                erreur = String(localized: "Le fichier téléchargé n'a pas pu être ajouté.")
+                return nil
+            }
+            return media
+        } catch let e as URLError where e.code == .cancelled {
+            erreur = String(localized: "Téléchargement annulé.")
+        } catch let e as ErreurTelechargement {
+            erreur = e.message
+        } catch {
+            erreur = String(localized: "Le téléchargement a échoué : \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    private static func pistes(de fichier: URL) async -> (image: Bool, son: Bool) {
+        // Facebook sert des fichiers sans extension reconnue : on travaille sur une copie en .mp4.
+        let copie = fichier.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + ".mp4")
+        guard (try? FileManager.default.copyItem(at: fichier, to: copie)) != nil else { return (false, false) }
+        defer { try? FileManager.default.removeItem(at: copie) }
+        let asset = AVURLAsset(url: copie)
+        let image = ((try? await asset.loadTracks(withMediaType: .video)) ?? []).isEmpty == false
+        let son = ((try? await asset.loadTracks(withMediaType: .audio)) ?? []).isEmpty == false
+        return (image, son)
+    }
+
+    private static func assembler(video: URL, audio: URL) async throws -> URL {
+        let dossier = video.deletingLastPathComponent()
+        let v = dossier.appendingPathComponent(UUID().uuidString + "-v.mp4")
+        let a = dossier.appendingPathComponent(UUID().uuidString + "-a.mp4")
+        try FileManager.default.copyItem(at: video, to: v)
+        try FileManager.default.copyItem(at: audio, to: a)
+        defer { try? FileManager.default.removeItem(at: v); try? FileManager.default.removeItem(at: a) }
+        let assetV = AVURLAsset(url: v), assetA = AVURLAsset(url: a)
+        guard let pisteV = try await assetV.loadTracks(withMediaType: .video).first,
+              let pisteA = try await assetA.loadTracks(withMediaType: .audio).first else {
+            throw ErreurTelechargement(message: "")
+        }
+        let duree = try await assetV.load(.duration)
+        let dureeA = try await assetA.load(.duration)
+        let composition = AVMutableComposition()
+        let coupe = CMTimeRange(start: .zero, duration: CMTimeMinimum(duree, dureeA.isValid && dureeA > .zero ? dureeA : duree))
+        guard let ecritV = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+              let ecritA = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
+            throw ErreurTelechargement(message: "")
+        }
+        try ecritV.insertTimeRange(CMTimeRange(start: .zero, duration: duree), of: pisteV, at: .zero)
+        try ecritA.insertTimeRange(coupe, of: pisteA, at: .zero)
+        ecritV.preferredTransform = try await pisteV.load(.preferredTransform)
+        let sortie = dossier.appendingPathComponent(UUID().uuidString + "-fusion.mp4")
+        guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
+            throw ErreurTelechargement(message: "")
+        }
+        export.outputURL = sortie
+        export.outputFileType = .mp4
+        await withCheckedContinuation { suite in export.exportAsynchronously { suite.resume() } }
+        guard export.status == .completed else { throw export.error ?? ErreurTelechargement(message: "") }
+        return sortie
+    }
+    #endif
 
     func annuler() {
         annule = true
