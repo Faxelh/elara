@@ -255,3 +255,8 @@
 "Lancez d'abord la lecture de la vidéo, puis touchez Télécharger." = "Сначала запустите видео, затем нажмите «Скачать».";
 "Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez." = "Не удалось найти файл этого видео. Откройте видео во весь экран (нажмите на него) и повторите попытку.";
 "Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger »." = "Вставьте прямую ссылку на видео- или аудиофайл (mp4, mov, mp3, m4a…) или ссылку на видео Facebook. Совет: на вкладке Facebook запустите видео и нажмите «Скачать».";
+"Vitesse" = "Скорость";
+"Remplir l'écran" = "Заполнить экран";
+"Ajuster à l'écran" = "Вписать в экран";
+"Reculer de 10 secondes" = "Назад на 10 секунд";
+"Avancer de 10 secondes" = "Вперёд на 10 секунд";
