@@ -18,6 +18,8 @@ enum ExtracteurFacebook {
 
     /// Renvoie le lien direct vers le fichier vidéo.
     static func lienVideo(depuis url: URL) async throws -> URL {
+        // La connexion faite dans l'onglet Facebook sert aussi aux liens collés.
+        await partagerConnexion()
         // 1. Lecture rapide de la page, sans navigateur.
         for agent in [agentOrdinateur, agentMobile] {
             if let html = try? await page(url, agent: agent), let lien = chercher(dans: html) {
@@ -29,6 +31,14 @@ enum ExtracteurFacebook {
             return lien
         }
         throw ErreurTelechargement(message: String(localized: "Vidéo Facebook introuvable. Elle est peut-être privée ou réservée aux membres : connectez-vous à Facebook dans Elara puis réessayez."))
+    }
+
+    /// Copie les cookies Facebook du navigateur intégré vers les requêtes de l'app.
+    private static func partagerConnexion() async {
+        let cookies = await WKWebsiteDataStore.default().httpCookieStore.allCookies()
+        for cookie in cookies where domaines.contains(where: { cookie.domain.hasSuffix($0) }) {
+            HTTPCookieStorage.shared.setCookie(cookie)
+        }
     }
 
     private static func page(_ url: URL, agent: String) async throws -> String {
@@ -91,12 +101,23 @@ enum ExtracteurFacebook {
 @MainActor
 enum NavigateurCache {
     static func chercherVideo(_ url: URL) async -> URL? {
+        // Version ordinateur d'abord (les liens des fichiers y sont plus souvent présents), puis mobile.
+        if let lien = await essayer(url, agent: ExtracteurFacebook.agentOrdinateur, secondes: 12) { return lien }
+        return await essayer(url, agent: ExtracteurFacebook.agentMobile, secondes: 10)
+    }
+
+    private static func essayer(_ url: URL, agent: String, secondes: Int) async -> URL? {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = .all
+        #if PERSO
+        // Même script que l'onglet Facebook : il note les liens des fichiers vidéo reçus par la page.
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: NavigateurFacebook.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        #endif
         let vue = WKWebView(frame: CGRect(x: 0, y: 0, width: 390, height: 844), configuration: configuration)
-        vue.customUserAgent = ExtracteurFacebook.agentMobile
+        vue.customUserAgent = agent
         vue.load(URLRequest(url: url))
         defer { vue.stopLoading() }
 
@@ -105,16 +126,34 @@ enum NavigateurCache {
           var v = Array.from(document.querySelectorAll('video'))
             .map(function(e) { return e.currentSrc || e.src || ''; })
             .find(function(s) { return s.indexOf('https://') === 0; });
-          return JSON.stringify({ html: document.documentElement.outerHTML, video: v || '' });
+          return JSON.stringify({ html: document.documentElement.outerHTML, video: v || '',
+                                  page: location.href, videos: JSON.stringify(window.__elaraVideos || {}) });
         })()
         """
-        for _ in 0..<15 {
+        for _ in 0..<secondes {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return nil }
             guard let json = await evaluer(script, dans: vue),
                   let objet = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: String] else { continue }
-            if let html = objet["html"], let lien = ExtracteurFacebook.chercher(dans: html) { return lien }
             if let video = objet["video"], !video.isEmpty, let lien = URL(string: video) { return lien }
+            if let lien = lienCapture(objet) { return lien }
+            if let html = objet["html"], let lien = ExtracteurFacebook.chercher(dans: html) { return lien }
+        }
+        return nil
+    }
+
+    /// Lien noté par le script : celui dont le numéro est dans l'adresse, sinon le seul trouvé.
+    private static func lienCapture(_ objet: [String: String]) -> URL? {
+        guard let texte = objet["videos"],
+              let videos = try? JSONSerialization.jsonObject(with: Data(texte.utf8)) as? [String: [String: String]],
+              !videos.isEmpty else { return nil }
+        #if PERSO
+        if let page = objet["page"], let id = NavigateurFacebook.numeroVideo(dans: page), let v = videos[id] {
+            return (v["hd"] ?? v["sd"]).flatMap(URL.init(string:))
+        }
+        #endif
+        if videos.count == 1, let v = videos.values.first {
+            return (v["hd"] ?? v["sd"]).flatMap(URL.init(string:))
         }
         return nil
     }

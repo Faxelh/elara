@@ -239,3 +239,20 @@
 "Un lien est copié" = "Hay un enlace copiado";
 "Le télécharger dans Elara ?" = "¿Descargarlo en Elara?";
 "Ignorer" = "Ignorar";
+
+/* Onglet Facebook */
+"Page précédente" = "Página anterior";
+"Page suivante" = "Página siguiente";
+"Télécharger la vidéo affichée" = "Descargar el vídeo en pantalla";
+"Recharger" = "Recargar";
+"Fil d'actualité" = "Noticias";
+"Se déconnecter de Facebook dans Elara ?" = "¿Cerrar sesión de Facebook en Elara?";
+"Téléchargement…" = "Descargando…";
+"Vidéo ajoutée à Elara" = "Vídeo añadido a Elara";
+"Vidéo en cours de lecture" = "Vídeo en reproducción";
+"La télécharger dans Elara ?" = "¿Descargarlo en Elara?";
+"Plein écran" = "Pantalla completa";
+"Quitter le plein écran" = "Salir de pantalla completa";
+"Lancez d'abord la lecture de la vidéo, puis touchez Télécharger." = "Primero reproduce el vídeo y luego toca Descargar.";
+"Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez." = "No se encontró el archivo de este vídeo. Ábrelo en pantalla completa (tócalo) y vuelve a intentarlo.";
+"Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger »." = "Pega un enlace directo a un archivo de vídeo o audio (mp4, mov, mp3, m4a…) o el enlace de un vídeo de Facebook. Consejo: en la pestaña Facebook, reproduce un vídeo y toca «Descargar».";

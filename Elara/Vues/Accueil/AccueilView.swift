@@ -16,7 +16,7 @@ struct AccueilView: View {
     @State private var lienInitial = ""
     @State private var lienCopie = false
     @AppStorage("presse-papiers-vu") private var pressePapiersVu = 0
-    @State private var filtre: Filtre = .tout
+    @AppStorage("accueil.filtre") private var filtre: Filtre = .tout
 
     enum Filtre: String, CaseIterable, Identifiable {
         case tout = "Tout", videos = "Vidéos", audio = "Audio"

@@ -48,7 +48,8 @@ struct RacineView: View {
     @AppStorage(Cle.verrouApp) private var verrouApp = false
     /// Change dès qu'une langue est choisie : les onglets sont alors redessinés dans la nouvelle langue.
     @AppStorage("langueChoisie") private var langueChoisie = "systeme"
-    @State private var onglet = 0
+    /// Onglet ouvert, retrouvé au prochain lancement.
+    @AppStorage("onglet") private var onglet = 0
     @State private var lienPartage: LienPartage?
     @State private var verrouOuverture = Coffre()
     @State private var demandeEnCours = false
@@ -72,6 +73,11 @@ struct RacineView: View {
             TransfertView()
                 .tabItem { Label("Transfert", systemImage: "arrow.up.arrow.down.circle.fill") }
                 .tag(1)
+            #if PERSO
+            FacebookView()
+                .tabItem { Label("Facebook", systemImage: "play.rectangle.on.rectangle.fill") }
+                .tag(5)
+            #endif
             CompresserView()
                 .tabItem { Label("Compresser", systemImage: "rectangle.compress.vertical") }
                 .tag(2)

@@ -3,7 +3,7 @@ import MultipeerConnectivity
 
 struct TransfertView: View {
     @Environment(Bibliotheque.self) private var bib
-    @State private var mode = 0
+    @AppStorage("transfert.mode") private var mode = 0
     @State private var transfert = Transfert()
     @State private var serveur = ServeurWifi()
     @State private var destinataire: MCPeerID?

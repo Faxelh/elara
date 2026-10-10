@@ -238,3 +238,20 @@
 "Un lien est copié" = "Ссылка скопирована";
 "Le télécharger dans Elara ?" = "Скачать в Elara?";
 "Ignorer" = "Скрыть";
+
+/* Onglet Facebook */
+"Page précédente" = "Предыдущая страница";
+"Page suivante" = "Следующая страница";
+"Télécharger la vidéo affichée" = "Скачать видео на экране";
+"Recharger" = "Обновить";
+"Fil d'actualité" = "Лента новостей";
+"Se déconnecter de Facebook dans Elara ?" = "Выйти из Facebook в Elara?";
+"Téléchargement…" = "Загрузка…";
+"Vidéo ajoutée à Elara" = "Видео добавлено в Elara";
+"Vidéo en cours de lecture" = "Воспроизводится видео";
+"La télécharger dans Elara ?" = "Скачать в Elara?";
+"Plein écran" = "Во весь экран";
+"Quitter le plein écran" = "Выйти из полноэкранного режима";
+"Lancez d'abord la lecture de la vidéo, puis touchez Télécharger." = "Сначала запустите видео, затем нажмите «Скачать».";
+"Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez." = "Не удалось найти файл этого видео. Откройте видео во весь экран (нажмите на него) и повторите попытку.";
+"Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger »." = "Вставьте прямую ссылку на видео- или аудиофайл (mp4, mov, mp3, m4a…) или ссылку на видео Facebook. Совет: на вкладке Facebook запустите видео и нажмите «Скачать».";

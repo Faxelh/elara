@@ -17,7 +17,7 @@ enum SourceCompression: Identifiable {
 
 struct CompresserView: View {
     @Environment(Bibliotheque.self) private var bib
-    @State private var onglet = 0
+    @AppStorage("compresser.onglet") private var onglet = 0
     @State private var photos = VideosPhotos()
     @State private var aCompresser: SourceCompression?
 

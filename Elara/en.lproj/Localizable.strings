@@ -238,3 +238,20 @@
 "Un lien est copié" = "A link is copied";
 "Le télécharger dans Elara ?" = "Download it in Elara?";
 "Ignorer" = "Dismiss";
+
+/* Onglet Facebook */
+"Page précédente" = "Previous page";
+"Page suivante" = "Next page";
+"Télécharger la vidéo affichée" = "Download the video on screen";
+"Recharger" = "Reload";
+"Fil d'actualité" = "News feed";
+"Se déconnecter de Facebook dans Elara ?" = "Sign out of Facebook in Elara?";
+"Téléchargement…" = "Downloading…";
+"Vidéo ajoutée à Elara" = "Video added to Elara";
+"Vidéo en cours de lecture" = "Video playing";
+"La télécharger dans Elara ?" = "Download it in Elara?";
+"Plein écran" = "Full screen";
+"Quitter le plein écran" = "Exit full screen";
+"Lancez d'abord la lecture de la vidéo, puis touchez Télécharger." = "Start playing the video first, then tap Download.";
+"Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez." = "Couldn't find this video's file. Open the video full screen (tap it) and try again.";
+"Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger »." = "Paste a direct link to a video or audio file (mp4, mov, mp3, m4a…) or a Facebook video link. Tip: in the Facebook tab, play a video, then tap “Download”.";

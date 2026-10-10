@@ -69,6 +69,11 @@ final class Telechargeur {
                 let format = DateFormatter()
                 format.dateFormat = "yyyy-MM-dd HH'h'mm"
                 nomForce = "Facebook " + format.string(from: Date()) + ".mp4"
+            } else if hote.hasSuffix("fbcdn.net") {
+                // Fichier vidéo trouvé depuis l'onglet Facebook.
+                let format = DateFormatter()
+                format.dateFormat = "yyyy-MM-dd HH'h'mm"
+                nomForce = "Facebook " + format.string(from: Date()) + ".mp4"
             }
             #endif
             if Task.isCancelled || annule { throw URLError(.cancelled) }

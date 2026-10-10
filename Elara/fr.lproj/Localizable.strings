@@ -238,3 +238,20 @@
 "Un lien est copié" = "Un lien est copié";
 "Le télécharger dans Elara ?" = "Le télécharger dans Elara ?";
 "Ignorer" = "Ignorer";
+
+/* Onglet Facebook */
+"Page précédente" = "Page précédente";
+"Page suivante" = "Page suivante";
+"Télécharger la vidéo affichée" = "Télécharger la vidéo affichée";
+"Recharger" = "Recharger";
+"Fil d'actualité" = "Fil d'actualité";
+"Se déconnecter de Facebook dans Elara ?" = "Se déconnecter de Facebook dans Elara ?";
+"Téléchargement…" = "Téléchargement…";
+"Vidéo ajoutée à Elara" = "Vidéo ajoutée à Elara";
+"Vidéo en cours de lecture" = "Vidéo en cours de lecture";
+"La télécharger dans Elara ?" = "La télécharger dans Elara ?";
+"Plein écran" = "Plein écran";
+"Quitter le plein écran" = "Quitter le plein écran";
+"Lancez d'abord la lecture de la vidéo, puis touchez Télécharger." = "Lancez d'abord la lecture de la vidéo, puis touchez Télécharger.";
+"Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez." = "Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez.";
+"Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger »." = "Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger ».";
