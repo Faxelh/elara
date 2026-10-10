@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import AVKit
 import MediaPlayer
 import Observation
 
@@ -14,6 +15,9 @@ final class LecteurController {
     private(set) var tempsActuel: Double = 0
     private(set) var dureeTotale: Double = 0
     private(set) var vitesse: Float = 1
+    /// Vrai pendant l'image dans l'image : l'écran du lecteur est fermé, la vidéo continue dans la fenêtre flottante.
+    var enPip = false
+    @ObservationIgnored var pip: AVPictureInPictureController?
 
     @ObservationIgnored let player = AVPlayer()
     @ObservationIgnored private let bibliotheque: Bibliotheque
@@ -64,6 +68,11 @@ final class LecteurController {
         if player.rate == 0 { player.play() } else { player.pause() }
         enLecture = player.rate != 0
         mettreAJourNowPlaying()
+    }
+
+    func basculerPip() {
+        guard let pip else { return }
+        if pip.isPictureInPictureActive { pip.stopPictureInPicture() } else { pip.startPictureInPicture() }
     }
 
     func definirVitesse(_ v: Float) {
