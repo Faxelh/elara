@@ -10,6 +10,12 @@ struct VideoDetectee: Equatable {
     var lien: String     // lien vers la vidéo trouvé autour du lecteur
 }
 
+/// Ce que le téléchargement doit récupérer : un fichier complet, ou des morceaux (image / son séparés).
+enum SourceFacebook {
+    case direct(URL)
+    case flux([URL])   // adresses vues pendant la lecture, la plus récente d'abord
+}
+
 /// Navigateur Facebook intégré (version perso).
 /// Il reste ouvert quand on change d'onglet et se souvient de la dernière page.
 @MainActor
@@ -72,29 +78,30 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
     // MARK: - Recherche du fichier de la vidéo
 
     /// Trouve le lien du fichier mp4 de la vidéo détectée (ou de celle visible à l'écran).
-    func lienFichier(pour detectee: VideoDetectee?) async throws -> URL {
+    func lienFichier(pour detectee: VideoDetectee?) async throws -> SourceFacebook {
         var cible = detectee
         if cible == nil { cible = await videoVisible() }
         guard let cible else {
             throw ErreurTelechargement(message: String(localized: "Lancez d'abord la lecture de la vidéo, puis touchez Télécharger."))
         }
         // 1. Le lecteur lit directement un fichier mp4.
-        if cible.source.hasPrefix("https://"), let url = URL(string: cible.source) { return url }
+        if cible.source.hasPrefix("https://"), let url = URL(string: cible.source) { return .direct(url) }
 
         // 2. Numéro de la vidéo dans l'adresse de la page ou dans un lien proche du lecteur.
         for texte in [cible.page, cible.lien] {
-            if let id = Self.numeroVideo(dans: texte), let url = await lienConnu(id: id) { return url }
+            if let id = Self.numeroVideo(dans: texte), let url = await lienConnu(id: id) { return .direct(url) }
         }
         // 2b. Adresse du fichier vue passer sur le réseau pendant la lecture (Reels).
-        if let url = await lienFlux() { return url }
+        let flux = await candidatsFlux()
+        if !flux.isEmpty { return .flux(flux) }
         // 3. Ouvrir la page de la vidéo (avec la connexion Facebook) et y chercher le fichier.
         for texte in [cible.lien, cible.page] where Self.estPageVideo(texte) {
             if let url = URL(string: texte), let lien = try? await ExtracteurFacebook.lienVideo(depuis: url) {
-                return lien
+                return .direct(lien)
             }
         }
         // 4. Une seule vidéo chargée sur la page : c'est forcément elle.
-        if let url = await lienUnique() { return url }
+        if let url = await lienUnique() { return .direct(url) }
         throw ErreurTelechargement(message: String(localized: "Impossible de trouver le fichier de cette vidéo. Ouvrez la vidéo en plein écran (touchez-la) puis réessayez."))
     }
 
@@ -105,13 +112,14 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
         return (objet["hd"] ?? objet["sd"]).flatMap(URL.init(string:))
     }
 
-    private func lienFlux() async -> URL? {
+    /// Les 4 derniers fichiers vidéo / son reçus par la page, le plus récent d'abord.
+    private func candidatsFlux() async -> [URL] {
         let js = """
-        (function(){ var l = (window.__elaraFlux || []).filter(function(e){ return !e.audio; });
-          return l.length ? l[l.length - 1].url : ''; })()
+        JSON.stringify((window.__elaraFlux || []).slice(-4).reverse().map(function(e){ return e.url; }))
         """
-        guard let texte = await evaluer(js), !texte.isEmpty else { return nil }
-        return URL(string: texte)
+        guard let texte = await evaluer(js),
+              let liste = try? JSONSerialization.jsonObject(with: Data(texte.utf8)) as? [String] else { return [] }
+        return liste.compactMap(URL.init(string:))
     }
 
     private func lienUnique() async -> URL? {
