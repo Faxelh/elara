@@ -93,6 +93,9 @@ struct RacineView: View {
         .sheet(item: $lienPartage) { partage in
             TelechargerView(lienInitial: partage.lien, demarrerSeul: true)
         }
+        .overlay(alignment: .topLeading) {
+            AncrePiP().frame(width: 2, height: 2).allowsHitTesting(false)
+        }
         .fullScreenCover(isPresented: $lecteur.estAffiche) {
             LecteurView()
         }
