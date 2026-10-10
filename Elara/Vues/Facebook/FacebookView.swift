@@ -179,8 +179,15 @@ struct FacebookView: View {
         ajoute = nil
         navigateur.video = nil
         do {
-            let lien = try await navigateur.lienFichier(pour: video)
-            if let media = await telechargeur.telecharger(lien.absoluteString, vers: bib, prive: false) {
+            let source = try await navigateur.lienFichier(pour: video)
+            let resultat: Media?
+            switch source {
+            case .direct(let lien):
+                resultat = await telechargeur.telecharger(lien.absoluteString, vers: bib, prive: false)
+            case .flux(let liens):
+                resultat = await telechargeur.telechargerFlux(liens, vers: bib, prive: false)
+            }
+            if let media = resultat {
                 withAnimation { ajoute = media }
             } else if let message = telechargeur.erreur {
                 withAnimation { erreur = message }
