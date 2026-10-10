@@ -85,6 +85,8 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
         for texte in [cible.page, cible.lien] {
             if let id = Self.numeroVideo(dans: texte), let url = await lienConnu(id: id) { return url }
         }
+        // 2b. Adresse du fichier vue passer sur le réseau pendant la lecture (Reels).
+        if let url = await lienFlux() { return url }
         // 3. Ouvrir la page de la vidéo (avec la connexion Facebook) et y chercher le fichier.
         for texte in [cible.lien, cible.page] where Self.estPageVideo(texte) {
             if let url = URL(string: texte), let lien = try? await ExtracteurFacebook.lienVideo(depuis: url) {
@@ -101,6 +103,15 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
         guard let texte = await evaluer(js),
               let objet = try? JSONSerialization.jsonObject(with: Data(texte.utf8)) as? [String: String] else { return nil }
         return (objet["hd"] ?? objet["sd"]).flatMap(URL.init(string:))
+    }
+
+    private func lienFlux() async -> URL? {
+        let js = """
+        (function(){ var l = (window.__elaraFlux || []).filter(function(e){ return !e.audio; });
+          return l.length ? l[l.length - 1].url : ''; })()
+        """
+        guard let texte = await evaluer(js), !texte.isEmpty else { return nil }
+        return URL(string: texte)
     }
 
     private func lienUnique() async -> URL? {
@@ -147,6 +158,7 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
 
     func userContentController(_ controleur: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let corps = message.body as? [String: Any] else { return }
+        if corps["maj"] != nil { majBoutons(); return }
         let detectee = VideoDetectee(
             source: corps["src"] as? String ?? "",
             page: corps["page"] as? String ?? "",
@@ -216,12 +228,39 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
       if (window.__elara) return;
       window.__elara = true;
       window.__elaraVideos = {};
+      window.__elaraFlux = [];
       var compteur = 0;
+
+      // Les Reels lisent des segments « blob: » : on note les vraies adresses des fichiers reçus.
+      function noter(u) {
+        try {
+          if (u && typeof u === 'object' && u.url) u = u.url;
+          if (typeof u !== 'string') return;
+          var x = new URL(u, location.href);
+          if (x.hostname.indexOf('fbcdn.net') < 0 || x.pathname.indexOf('.mp4') < 0) return;
+          x.searchParams.delete('bytestart'); x.searchParams.delete('byteend');
+          var tag = '';
+          try { tag = atob((x.searchParams.get('efg') || '').replace(/-/g, '+').replace(/_/g, '/')); } catch (e) {}
+          var audio = /audio/i.test(tag) && !/video/i.test(tag.replace(/audio/ig, ''));
+          var liste = window.__elaraFlux;
+          for (var i = liste.length - 1; i >= 0; i--) { if (liste[i].chemin === x.pathname) liste.splice(i, 1); }
+          liste.push({ url: x.href, chemin: x.pathname, audio: audio, t: Date.now() });
+          if (liste.length > 40) liste.shift();
+        } catch (e) {}
+      }
+      ['pushState', 'replaceState'].forEach(function (nom) {
+        var o = history[nom];
+        history[nom] = function () {
+          var r = o.apply(this, arguments);
+          try { window.webkit.messageHandlers.elara.postMessage({ maj: 1 }); } catch (e) {}
+          return r;
+        };
+      });
 
       function analyser(t) {
         try {
           if (!t || typeof t !== 'string' || t.indexOf('_url') < 0) return;
-          var re = /"(browser_native_hd_url|browser_native_sd_url|playable_url_quality_hd|playable_url|hd_src|sd_src)":"((?:[^"\\]|\\.)+)"/g, m;
+          var re = /"(browser_native_hd_url|browser_native_sd_url|playable_url_quality_hd|playable_url|hd_src|sd_src|progressive_url)":"((?:[^"\\]|\\.)+)"/g, m;
           while ((m = re.exec(t))) {
             var url;
             try { url = JSON.parse('"' + m[2] + '"'); } catch (e) { continue; }
@@ -238,12 +277,15 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
       var fetchOriginal = window.fetch;
       if (fetchOriginal) {
         window.fetch = function () {
+          noter(arguments[0]);
           return fetchOriginal.apply(this, arguments).then(function (r) {
             try { r.clone().text().then(analyser).catch(function () {}); } catch (e) {}
             return r;
           });
         };
       }
+      var ouvrir = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (m, u) { noter(u); return ouvrir.apply(this, arguments); };
       var envoi = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.send = function () {
         this.addEventListener('load', function () {
