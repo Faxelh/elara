@@ -13,6 +13,7 @@ final class LecteurController {
     private(set) var enLecture = false
     private(set) var tempsActuel: Double = 0
     private(set) var dureeTotale: Double = 0
+    private(set) var vitesse: Float = 1
 
     @ObservationIgnored let player = AVPlayer()
     @ObservationIgnored private let bibliotheque: Bibliotheque
@@ -63,6 +64,12 @@ final class LecteurController {
         if player.rate == 0 { player.play() } else { player.pause() }
         enLecture = player.rate != 0
         mettreAJourNowPlaying()
+    }
+
+    func definirVitesse(_ v: Float) {
+        vitesse = v
+        player.defaultRate = v
+        if player.rate != 0 { player.rate = v }
     }
 
     func suivant() {
