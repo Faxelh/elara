@@ -75,18 +75,69 @@ final class MiseAJour {
         }
     }
 
+    /// Vrai si ni SideStore ni AltStore ne sont installés sur l'iPhone.
+    var sideStoreAbsent = false
+
     /// Ouvre SideStore (ou AltStore) sur la source d'Elara : l'app s'y met à jour toute seule ensuite.
     func ouvrirDansSideStore() {
         let encodee = Self.source.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? Self.source
         let sidestore = URL(string: "sidestore://source?url=\(encodee)")!
         let altstore = URL(string: "altstore://source?url=\(encodee)")!
+        sideStoreAbsent = false
         UIApplication.shared.open(sidestore) { ok in
-            if !ok { UIApplication.shared.open(altstore) }
+            guard !ok else { return }
+            UIApplication.shared.open(altstore) { ok2 in
+                Task { @MainActor in MiseAJour.partage.sideStoreAbsent = !ok2 }
+            }
         }
     }
 
-    func telechargerIPA(_ version: VersionDisponible) {
-        UIApplication.shared.open(version.lienIPA)
+    // MARK: - Téléchargement de l'IPA (dans Elara : un lien GitHub ouvrirait l'app GitHub)
+
+    private(set) var ipaEnCours = false
+    private(set) var ipaProgression: Double = 0
+    private(set) var fichierIPA: URL?
+    private(set) var erreurIPA = false
+
+    func telechargerIPA(_ version: VersionDisponible) async {
+        guard !ipaEnCours else { return }
+        ipaEnCours = true
+        ipaProgression = 0
+        erreurIPA = false
+        fichierIPA = nil
+        defer { ipaEnCours = false }
+        do {
+            let (flux, reponse) = try await URLSession.shared.bytes(from: version.lienIPA)
+            guard (reponse as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false else {
+                erreurIPA = true
+                return
+            }
+            let total = max(reponse.expectedContentLength, 1)
+            let dossier = FileManager.default.temporaryDirectory.appendingPathComponent("maj", isDirectory: true)
+            try? FileManager.default.removeItem(at: dossier)
+            try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+            let cible = dossier.appendingPathComponent("Elara-\(version.version).ipa")
+            FileManager.default.createFile(atPath: cible.path, contents: nil)
+            let sortie = try FileHandle(forWritingTo: cible)
+            defer { try? sortie.close() }
+            var tampon = Data()
+            tampon.reserveCapacity(1 << 20)
+            var recus: Int64 = 0
+            for try await octet in flux {
+                tampon.append(octet)
+                if tampon.count >= 1 << 20 {
+                    try sortie.write(contentsOf: tampon)
+                    recus += Int64(tampon.count)
+                    tampon.removeAll(keepingCapacity: true)
+                    ipaProgression = min(Double(recus) / Double(total), 1)
+                }
+            }
+            if !tampon.isEmpty { try sortie.write(contentsOf: tampon) }
+            ipaProgression = 1
+            fichierIPA = cible
+        } catch {
+            erreurIPA = true
+        }
     }
 }
 
@@ -95,6 +146,7 @@ final class MiseAJour {
 struct ModifMiseAJour: ViewModifier {
     @State private var maj = MiseAJour.partage
     @State private var proposee: VersionDisponible?
+    @State private var feuille = false
     var auDemarrage = true
 
     func body(content: Content) -> some View {
@@ -112,12 +164,18 @@ struct ModifMiseAJour: ViewModifier {
                 presenting: proposee
             ) { v in
                 Button("Mettre à jour avec SideStore") { maj.ouvrirDansSideStore() }
-                Button("Télécharger l'IPA (Sideloadly)") { maj.telechargerIPA(v) }
+                Button("Télécharger l'IPA (Sideloadly)") { feuille = true }
                 Button("Plus tard", role: .cancel) {
                     UserDefaults.standard.set(v.numero, forKey: "maj.ignoree")
                 }
             } message: { v in
                 Text("Elara \(v.version) est disponible (vous avez la \(maj.texteVersion)).")
+            }
+            .sheet(isPresented: $feuille) {
+                NavigationStack {
+                    MiseAJourView()
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { feuille = false } } }
+                }
             }
     }
 }

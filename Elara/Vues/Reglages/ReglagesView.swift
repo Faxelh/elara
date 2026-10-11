@@ -413,7 +413,24 @@ struct MiseAJourView: View {
                         if !v.notes.isEmpty { Text(v.notes).font(.caption).foregroundStyle(.secondary) }
                     }
                     Button("Mettre à jour avec SideStore", systemImage: "arrow.down.app") { maj.ouvrirDansSideStore() }
-                    Button("Télécharger l'IPA (Sideloadly)", systemImage: "arrow.down.doc") { maj.telechargerIPA(v) }
+                    if maj.ipaEnCours {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Téléchargement de l'IPA…")
+                            ProgressView(value: maj.ipaProgression)
+                        }
+                    } else if let fichier = maj.fichierIPA {
+                        ShareLink(item: fichier) {
+                            Label("Enregistrer l'IPA (Fichiers, AirDrop…)", systemImage: "square.and.arrow.up")
+                        }
+                    } else {
+                        Button("Télécharger l'IPA (Sideloadly)", systemImage: "arrow.down.doc") {
+                            Task { await maj.telechargerIPA(v) }
+                        }
+                    }
+                    if maj.erreurIPA {
+                        Label("Le téléchargement de l'IPA a échoué. Réessayez.", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    }
                 } else if verifie && !maj.recherche {
                     Label(maj.erreur ? "Vérification impossible. Vérifiez la connexion." : "Elara est à jour.",
                           systemImage: maj.erreur ? "wifi.exclamationmark" : "checkmark.circle")
@@ -425,8 +442,12 @@ struct MiseAJourView: View {
                 Button("Copier l'adresse de la source", systemImage: "doc.on.doc") {
                     UIPasteboard.general.string = MiseAJour.source
                 }
+                if maj.sideStoreAbsent {
+                    Label("SideStore et AltStore ne sont pas installés sur cet iPhone.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
             } footer: {
-                Text("Avec SideStore ou AltStore, Elara se met à jour toute seule dès qu'une nouvelle version est publiée sur GitHub. Avec Sideloadly, téléchargez l'IPA puis installez-la par-dessus : vos vidéos sont conservées.")
+                Text("Avec SideStore ou AltStore, Elara se met à jour toute seule dès qu'une nouvelle version est publiée sur GitHub. Avec Sideloadly : téléchargez l'IPA, envoyez-la sur l'ordinateur (AirDrop, Fichiers, iCloud…) puis installez-la par-dessus : vos vidéos sont conservées.")
             }
         }
         .navigationTitle("Mises à jour")

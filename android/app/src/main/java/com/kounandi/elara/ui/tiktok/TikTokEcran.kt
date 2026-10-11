@@ -264,10 +264,7 @@ fun TikTokEcran(marges: PaddingValues) {
             )
             val video = NavigateurTikTok.video
             val visible = Telechargeur.enCours || erreur != null || ajoute != null || video != null
-            AnimatedVisibility(
-                visible, enter = slideInVertically { it }, exit = slideOutVertically { it },
-                modifier = Modifier.align(Alignment.BottomCenter).widthIn(max = 640.dp).padding(12.dp),
-            ) {
+            Glissant(visible, Modifier.align(Alignment.BottomCenter).widthIn(max = 640.dp).padding(12.dp)) {
                 Row(
                     Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp),
@@ -322,4 +319,13 @@ fun TikTokEcran(marges: PaddingValues) {
             }
         }
     }
+}
+
+/** Bandeau qui glisse depuis le bas (hors de la Column : évite la version « ColumnScope »). */
+@Composable
+private fun Glissant(visible: Boolean, modifier: Modifier, contenu: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = visible, modifier = modifier,
+        enter = slideInVertically { it }, exit = slideOutVertically { it },
+    ) { contenu() }
 }
