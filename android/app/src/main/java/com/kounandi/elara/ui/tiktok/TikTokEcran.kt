@@ -193,9 +193,17 @@ object NavigateurTikTok {
         });
         return meilleure ? source(meilleure) : '';
       };
+      // Au premier toucher (geste de l'utilisateur), on remet aussi le son de la vidéo affichée.
+      document.addEventListener('touchend', function () {
+        document.querySelectorAll('video').forEach(function (v) {
+          if (!v.paused && v.muted) { v.muted = false; v.volume = 1; }
+        });
+      }, true);
       document.addEventListener('play', function (e) {
         var v = e.target;
         if (!v || v.tagName !== 'VIDEO') return;
+        // TikTok coupe le son des vidéos lues automatiquement : on le remet.
+        if (v.muted) { v.muted = false; v.volume = 1; }
         setTimeout(function () { try { ElaraTikTok.lecture(source(v)); } catch (err) {} }, 300);
       }, true);
     })();

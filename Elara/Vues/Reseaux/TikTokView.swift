@@ -22,6 +22,8 @@ final class NavigateurTikTok: NSObject, WKNavigationDelegate, WKScriptMessageHan
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
+        // Lecture automatique AVEC le son (sinon iOS impose des vidéos muettes).
+        configuration.mediaTypesRequiringUserActionForPlayback = []
         let controleur = WKUserContentController()
         controleur.addUserScript(WKUserScript(source: Self.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         controleur.addUserScript(AntiApp.userScript)
@@ -128,9 +130,17 @@ final class NavigateurTikTok: NSObject, WKNavigationDelegate, WKScriptMessageHan
         });
         return meilleure ? source(meilleure) : '';
       };
+      // Au premier toucher (geste de l'utilisateur), on remet aussi le son de la vidéo affichée.
+      document.addEventListener('touchend', function () {
+        document.querySelectorAll('video').forEach(function (v) {
+          if (!v.paused && v.muted) { v.muted = false; v.volume = 1; }
+        });
+      }, true);
       document.addEventListener('play', function (e) {
         var v = e.target;
         if (!v || v.tagName !== 'VIDEO') return;
+        // TikTok coupe le son des vidéos lues automatiquement : on le remet.
+        if (v.muted) { v.muted = false; v.volume = 1; }
         setTimeout(function () {
           try { window.webkit.messageHandlers.elaraTikTok.postMessage(source(v)); } catch (err) {}
         }, 300);
