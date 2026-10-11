@@ -98,6 +98,7 @@ struct CompresserView: View {
                     ForEach(videos) { media in
                         Button { aCompresser = .app(media) } label: {
                             VignetteMedia(media: media)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -156,13 +157,16 @@ final class VideosPhotos {
 struct VignettePhoto: View {
     let asset: PHAsset
     @State private var image: UIImage?
+    @State private var imageDe: String?
+    @State private var attendu: String?
     @State private var taille: Int64 = 0
 
     var body: some View {
         Color.clear
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                if let image {
+                // N'affiche que la miniature de CETTE vidéo (jamais celle d'une case réutilisée).
+                if let image, imageDe == asset.localIdentifier {
                     Image(uiImage: image).resizable().scaledToFill()
                 } else {
                     Theme.degrade
@@ -176,17 +180,33 @@ struct VignettePhoto: View {
                 }
                 .padding(6)
             }
+            .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            // La zone touchable = la case elle-même (l'image qui déborde ne capte plus les touches voisines).
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .task(id: asset.localIdentifier) {
+                let identifiant = asset.localIdentifier
+                image = nil
+                imageDe = nil
+                attendu = identifiant
                 taille = VideosPhotos.taille(de: asset)
                 let options = PHImageRequestOptions()
                 options.isNetworkAccessAllowed = true
                 options.deliveryMode = .opportunistic
-                PHImageManager.default().requestImage(
+                let demande = PHImageManager.default().requestImage(
                     for: asset, targetSize: CGSize(width: 300, height: 300),
                     contentMode: .aspectFill, options: options
                 ) { resultat, _ in
-                    if let resultat { image = resultat }
+                    Task { @MainActor in
+                        guard let resultat, attendu == identifiant else { return }
+                        image = resultat
+                        imageDe = identifiant
+                    }
+                }
+                await withTaskCancellationHandler {
+                    while !Task.isCancelled { try? await Task.sleep(for: .seconds(60)) }
+                } onCancel: {
+                    PHImageManager.default().cancelImageRequest(demande)
                 }
             }
     }

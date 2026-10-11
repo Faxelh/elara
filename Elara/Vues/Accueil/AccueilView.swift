@@ -327,7 +327,9 @@ struct VignetteMedia: View {
                     }
                     .padding(6)
                 }
+                .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             Text(media.nom)
                 .font(.caption)

@@ -71,24 +71,60 @@ enum AntiApp {
     });
   }
 
+  // Les sites utilisent souvent des <div> cliquables : on cherche donc les TEXTES, pas seulement les boutons.
+  function textesCourts(racine, test) {
+    var res = [];
+    if (!racine) return res;
+    var w = document.createTreeWalker(racine, NodeFilter.SHOW_TEXT);
+    var n;
+    while ((n = w.nextNode())) {
+      var t = n.nodeValue;
+      if (!t || t.length > 80) continue;
+      t = t.replace(/\s+/g, ' ').trim();
+      if (t && n.parentElement && test(t)) res.push(n.parentElement);
+    }
+    return res;
+  }
+  function cliquable(el) {
+    return (el.closest && el.closest('button, a, [role="button"], [role="link"]')) || el;
+  }
+  function boutonRefus(el) {
+    // On remonte depuis « Ouvrir l'application » jusqu'à la fenêtre qui contient « Pas maintenant » / la croix.
+    var n = el.parentElement;
+    for (var niveau = 0; n && niveau < 10 && n !== document.body; niveau++, n = n.parentElement) {
+      if (texte(n).length > 500 || n.querySelector('video')) return null;
+      var refus = textesCourts(n, function (t) { return REFUS.indexOf(t.toLowerCase()) !== -1; });
+      if (refus.length) return { bouton: cliquable(refus[0]), boite: n };
+      var croix = n.querySelector('[aria-label="Fermer"], [aria-label="Close"], [aria-label="fermer"], [aria-label="close"], [data-e2e*="close"], [class*="close" i]');
+      if (croix) return { bouton: cliquable(croix), boite: n };
+    }
+    return null;
+  }
+
   function nettoyer() {
     ajouterStyle();
-    var elements = document.querySelectorAll('button, a, [role="button"], [role="link"]');
-    for (var i = 0; i < elements.length; i++) {
-      var el = elements[i];
-      if (el.__elaraVu || !estPromo(el)) continue;
+    var promos = textesCourts(document.body, function (t) { return t.length < 60 && PROMO.test(t); });
+    var liens = document.querySelectorAll('a[href]');
+    for (var k = 0; k < liens.length; k++) { if (LIEN_APP.test(liens[k].getAttribute('href'))) promos.push(liens[k]); }
+    for (var i = 0; i < promos.length; i++) {
+      var el = cliquable(promos[i]);
+      if (el.__elaraVu || el.getAttribute('data-elara-cache')) continue;
       el.__elaraVu = true;
-      var boite = conteneurFixe(el);
-      if (boite) {
-        // Fenêtre « Ouvrir l'application » : on touche « Pas maintenant » / la croix si elle existe.
-        var refus = null;
-        var dedans = boite.querySelectorAll('button, a, [role="button"], div[aria-label], span[aria-label]');
-        for (var j = 0; j < dedans.length; j++) { if (estRefus(dedans[j])) { refus = dedans[j]; break; } }
-        if (refus) { try { refus.click(); } catch (e) {} setTimeout(debloquerDefilement, 300); continue; }
-        // Vraie fenêtre (role="dialog") sans bouton de refus : on la cache, elle seule.
-        var dialogue = el.closest('[role="dialog"], [aria-modal="true"]');
-        if (dialogue && texte(dialogue).length < 300) { cacher(dialogue); debloquerDefilement(); continue; }
+      var refus = boutonRefus(el);
+      if (refus) {
+        // Fenêtre « Ouvrir l'application » : on touche « Pas maintenant » (ou la croix).
+        try { refus.bouton.click(); } catch (e) {}
+        (function (boite, bouton) {
+          setTimeout(function () {
+            // Si la fenêtre est toujours là, on la cache.
+            if (boite.isConnected && boite.getBoundingClientRect().height > 0 && !boite.querySelector('video')) cacher(boite);
+            debloquerDefilement();
+          }, 700);
+        })(refus.boite, el);
+        continue;
       }
+      var dialogue = el.closest('[role="dialog"], [aria-modal="true"]');
+      if (dialogue && texte(dialogue).length < 300 && !dialogue.querySelector('video')) { cacher(dialogue); debloquerDefilement(); continue; }
       // Sinon on ne cache que le bouton lui-même : la page (vidéos, menu, recherche) reste intacte.
       // Jamais un élément qui contient une vidéo ou qui couvre une grande partie de l'écran.
       if (el.querySelector('video, img, canvas')) continue;
@@ -108,7 +144,7 @@ enum AntiApp {
   var prevu = null;
   function planifier() {
     if (prevu) return;
-    prevu = setTimeout(function () { prevu = null; try { nettoyer(); } catch (e) {} }, 250);
+    prevu = setTimeout(function () { prevu = null; try { nettoyer(); } catch (e) {} }, 500);
   }
   new MutationObserver(planifier).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('DOMContentLoaded', planifier);
