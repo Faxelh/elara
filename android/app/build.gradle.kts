@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 35
         // Numéro de version = numéro de la compilation GitHub : chaque APK est plus récent que le précédent.
-        val numero = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        val numero = (System.getenv("ELARA_BUILD") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionCode = numero
         versionName = System.getenv("ELARA_VERSION") ?: "2026.2.0"
         resourceConfigurations += listOf("fr", "en", "ru", "es")
