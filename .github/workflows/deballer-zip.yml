@@ -1,0 +1,50 @@
+# Déposez simplement elara-src.zip à la racine du dépôt (Add file › Upload files) :
+# ce workflow le décompresse, enregistre les fichiers, supprime le zip,
+# puis lance la compilation iPhone et Android.
+name: Déballer le zip
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  deballer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Décompresser et remplacer les fichiers
+        run: |
+          set -e
+          ZIP=$(ls -t *.zip 2>/dev/null | head -n 1)
+          if [ -z "$ZIP" ]; then echo "Aucun zip à la racine."; exit 0; fi
+          echo "Zip trouvé : $ZIP"
+          mkdir -p /tmp/zip && unzip -q -o "$ZIP" -d /tmp/zip
+          SRC=/tmp/zip
+          # Si le zip contient un seul dossier (ex. Elara/…), on prend son contenu.
+          if [ "$(ls -A $SRC | wc -l)" = "1" ] && [ -d "$SRC/$(ls -A $SRC)" ] && [ ! -f "$SRC/project.yml" ]; then
+            SRC="$SRC/$(ls -A $SRC)"
+          fi
+          # Les workflows ne peuvent pas être modifiés automatiquement (règle de GitHub) : on les ignore.
+          rsync -a --exclude ".git" --exclude ".github" "$SRC"/ ./
+          git rm -q --cached "$ZIP" || true
+          rm -f "$ZIP"
+          git config user.name "elara-bot"
+          git config user.email "elara-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Rien de nouveau."; else git commit -q -m "Mise à jour depuis $ZIP"; fi
+          git push
+
+      - name: Lancer les compilations iPhone et Android
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run elara-ipa.yml --ref main || true
+          gh workflow run elara-apk.yml --ref main || true
