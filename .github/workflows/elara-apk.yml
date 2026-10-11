@@ -1,0 +1,71 @@
+name: Elara – APK Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/elara-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Version affichée : contenu du fichier VERSION (ex. 2026.2) + nombre de mises à jour
+      # depuis sa dernière modification → 2026.2.0, 2026.2.1, 2026.2.2…
+      - name: Calculer la version
+        run: |
+          BASE=$(head -n 1 "$GITHUB_WORKSPACE/VERSION" | tr -d '[:space:]')
+          DEPUIS=$(git -C "$GITHUB_WORKSPACE" log -1 --format=%H -- VERSION)
+          if [ -n "$DEPUIS" ]; then N=$(git -C "$GITHUB_WORKSPACE" rev-list --count "$DEPUIS"..HEAD); else N=0; fi
+          echo "ELARA_VERSION=$BASE.$N" >> "$GITHUB_ENV"
+          echo "Version : $BASE.$N"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Compiler l'APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Renommer l'APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk Elara.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Elara-apk
+          path: android/Elara.apk
+          if-no-files-found: error
+
+      # Publie l'APK dans « Releases » : Elara le trouve et propose la mise à jour toute seule.
+      - name: Publier la mise à jour
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "android-${{ github.run_number }}" Elara.apk \
+            --repo "${{ github.repository }}" \
+            --title "Elara Android $ELARA_VERSION" \
+            --notes "$(git log -1 --pretty=%s)" \
+            --target "${{ github.sha }}"
+          # On garde seulement les 5 dernières versions Android.
+          gh release list --repo "${{ github.repository }}" --limit 100 --json tagName -q '.[].tagName' \
+            | grep '^android-' | sort -t- -k2 -n -r | tail -n +6 \
+            | xargs -r -I{} gh release delete {} --repo "${{ github.repository }}" --yes --cleanup-tag
+
