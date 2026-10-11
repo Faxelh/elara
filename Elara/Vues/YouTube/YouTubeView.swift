@@ -21,6 +21,9 @@ final class NavigateurYouTube: NSObject, WKNavigationDelegate {
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
         configuration.allowsPictureInPictureMediaPlayback = true
+        let controleur = WKUserContentController()
+        controleur.addUserScript(AntiApp.userScript)
+        configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)
         vue.allowsBackForwardNavigationGestures = true
         super.init()
@@ -47,6 +50,11 @@ final class NavigateurYouTube: NSObject, WKNavigationDelegate {
         if let url = vue.url, url.host?.contains("youtube.com") == true {
             UserDefaults.standard.set(url.absoluteString, forKey: Self.cleDernierePage)
         }
+    }
+
+    /// Liens « Ouvrir l'application » / App Store : on reste dans Elara.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        AntiApp.bloque(navigationAction.request.url) ? .cancel : .allow
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {

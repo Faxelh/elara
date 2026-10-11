@@ -24,6 +24,7 @@ final class NavigateurTikTok: NSObject, WKNavigationDelegate, WKScriptMessageHan
         configuration.allowsInlineMediaPlayback = true
         let controleur = WKUserContentController()
         controleur.addUserScript(WKUserScript(source: Self.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        controleur.addUserScript(AntiApp.userScript)
         configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)
         vue.customUserAgent = ExtracteurFacebook.agentMobile
@@ -78,6 +79,11 @@ final class NavigateurTikTok: NSObject, WKNavigationDelegate, WKScriptMessageHan
     func userContentController(_ controleur: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let src = message.body as? String, src.hasPrefix("https://"), !ignorees.contains(src) else { return }
         video = src
+    }
+
+    /// Liens « Ouvrir l'application » / App Store : on reste dans Elara.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        AntiApp.bloque(navigationAction.request.url) ? .cancel : .allow
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { chargement = true }

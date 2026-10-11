@@ -1,5 +1,6 @@
 package com.kounandi.elara.ui.youtube
 
+import com.kounandi.elara.ui.commun.AntiApp
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.MutableContextWrapper
@@ -79,10 +80,15 @@ object NavigateurYouTube {
         }
         CookieManager.getInstance().setAcceptThirdPartyCookies(w, true)
         w.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) { chargement = true; maj(view) }
+            override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+                chargement = true
+                maj(view)
+                view.evaluateJavascript(AntiApp.SCRIPT, null)
+            }
             override fun onPageFinished(view: WebView, url: String?) {
                 chargement = false
                 maj(view)
+                view.evaluateJavascript(AntiApp.SCRIPT, null)
                 url?.let { if (Uri.parse(it).host?.contains("youtube.com") == true) Reglages.ecrireTexte("youtube.page", it) }
                 CookieManager.getInstance().flush()
             }
@@ -92,7 +98,7 @@ object NavigateurYouTube {
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val schema = request.url.scheme ?: return true
-                return schema != "http" && schema != "https"   // « Ouvrir l'app YouTube » reste dans Elara
+                return schema != "http" && schema != "https" || AntiApp.bloque(request.url)   // « Ouvrir l'app YouTube » reste dans Elara
             }
         }
         w.webChromeClient = object : WebChromeClient() {

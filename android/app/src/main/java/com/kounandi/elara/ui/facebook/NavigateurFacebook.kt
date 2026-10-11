@@ -1,5 +1,6 @@
 package com.kounandi.elara.ui.facebook
 
+import com.kounandi.elara.ui.commun.AntiApp
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.MutableContextWrapper
@@ -97,12 +98,14 @@ object NavigateurFacebook {
                 chargement = true
                 maj(view)
                 if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) view.evaluateJavascript(SCRIPT, null)
+                view.evaluateJavascript(AntiApp.SCRIPT, null)
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
                 chargement = false
                 maj(view)
                 if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) view.evaluateJavascript(SCRIPT, null)
+                view.evaluateJavascript(AntiApp.SCRIPT, null)
                 url?.let { u -> if (Uri.parse(u).host?.let { Telechargeur.estFacebook(it) } == true) Reglages.ecrireTexte("facebook.page", u) }
                 CookieManager.getInstance().flush()
             }
@@ -113,8 +116,8 @@ object NavigateurFacebook {
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val schema = request.url.scheme ?: return true
-                // Les liens « ouvrir l'application » (fb://, intent://) restent dans Elara.
-                return schema != "http" && schema != "https"
+                // Les liens « ouvrir l'application » (fb://, intent://, Play Store) restent dans Elara.
+                return schema != "http" && schema != "https" || AntiApp.bloque(request.url)
             }
 
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {

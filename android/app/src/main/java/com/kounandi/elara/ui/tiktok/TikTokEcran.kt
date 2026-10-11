@@ -1,5 +1,6 @@
 package com.kounandi.elara.ui.tiktok
 
+import com.kounandi.elara.ui.commun.AntiApp
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.MutableContextWrapper
@@ -113,11 +114,13 @@ object NavigateurTikTok {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 chargement = true
                 view.evaluateJavascript(SCRIPT, null)
+                view.evaluateJavascript(AntiApp.SCRIPT, null)
             }
             override fun onPageFinished(view: WebView, url: String?) {
                 chargement = false
                 peutReculer = view.canGoBack()
                 view.evaluateJavascript(SCRIPT, null)
+                view.evaluateJavascript(AntiApp.SCRIPT, null)
                 url?.let { if (Uri.parse(it).host?.contains("tiktok.com") == true) Reglages.ecrireTexte("tiktok.page", it) }
                 CookieManager.getInstance().flush()
             }
@@ -126,7 +129,7 @@ object NavigateurTikTok {
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val schema = request.url.scheme ?: return true
-                return schema != "http" && schema != "https"   // « Ouvrir l'app TikTok » reste dans Elara
+                return schema != "http" && schema != "https" || AntiApp.bloque(request.url)   // « Ouvrir l'app TikTok » reste dans Elara
             }
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                 val u = request.url.toString()

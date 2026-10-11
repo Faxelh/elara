@@ -44,6 +44,7 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
         configuration.allowsPictureInPictureMediaPlayback = true
         let controleur = WKUserContentController()
         controleur.addUserScript(WKUserScript(source: Self.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        controleur.addUserScript(AntiApp.userScript)
         configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)
         vue.customUserAgent = ExtracteurFacebook.agentMobile
@@ -210,6 +211,11 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         chargement = false
         majBoutons()
+    }
+
+    /// Liens « Ouvrir l'application » / App Store : on reste dans Elara.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        AntiApp.bloque(navigationAction.request.url) ? .cancel : .allow
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
