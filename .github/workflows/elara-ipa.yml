@@ -34,6 +34,9 @@ jobs:
           DEPUIS=$(git -C "$GITHUB_WORKSPACE" log -1 --format=%H -- VERSION)
           if [ -n "$DEPUIS" ]; then N=$(git -C "$GITHUB_WORKSPACE" rev-list --count "$DEPUIS"..HEAD); else N=0; fi
           echo "ELARA_VERSION=$BASE.$N" >> "$GITHUB_ENV"
+          # Numéro de compilation : minutes écoulées depuis 1970. Il augmente toujours,
+          # même si le dépôt est recréé (sinon Elara croit être déjà à jour).
+          echo "ELARA_BUILD=$(( $(date -u +%s) / 60 ))" >> "$GITHUB_ENV"
           echo "Version : $BASE.$N"
 
       - name: Préparer les outils
@@ -61,7 +64,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             SWIFT_ACTIVE_COMPILATION_CONDITIONS=PERSO \
-            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CURRENT_PROJECT_VERSION=$ELARA_BUILD \
             MARKETING_VERSION=$ELARA_VERSION > build/xcodebuild.log 2>&1
           statut=$?
           set -e
@@ -92,9 +95,9 @@ jobs:
       - name: Publier la mise à jour
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NUMERO: ${{ github.run_number }}
           DEPOT: ${{ github.repository }}
         run: |
+          NUMERO=$ELARA_BUILD
           gh release create "ios-$NUMERO" build/ipa/Elara.ipa \
             --repo "$DEPOT" --title "Elara iPhone $ELARA_VERSION" \
             --notes "$(git log -1 --pretty=%s)" --target "${{ github.sha }}"
