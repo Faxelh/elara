@@ -152,7 +152,7 @@ object NavigateurTikTok {
     suspend fun lienVideoVisible(): String? {
         val w = vue ?: return null
         val js = "window.__elaraTikTok ? window.__elaraTikTok() : ''"
-        val r = suspendCancellableCoroutine { suite ->
+        val r: String? = suspendCancellableCoroutine<String?> { suite ->
             w.evaluateJavascript(js) { brut -> suite.resume(runCatching { JSONTokener(brut).nextValue() as? String }.getOrNull()) }
         }
         return r?.takeIf { it.startsWith("https://") } ?: synchronized(vus) { vus.lastOrNull() }
