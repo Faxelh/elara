@@ -169,15 +169,18 @@ object Telechargeur {
     }
 
     /** Télécharge dans le cache en suivant la progression. */
-    private suspend fun telechargerBrut(ctx: Context, lien: String, base: Float, part: Float): File = withContext(Dispatchers.IO) {
+    private suspend fun telechargerBrut(
+        ctx: Context, lien: String, base: Float, part: Float,
+        entetes: Map<String, String> = emptyMap(),
+    ): File = withContext(Dispatchers.IO) {
         var adresse = lien
-        var connexion = ouvrir(adresse)
+        var connexion = ouvrir(adresse, entetes)
         var redirections = 0
         while (connexion.responseCode in 300..399 && redirections < 8) {
             val suite = connexion.getHeaderField("Location") ?: break
             adresse = URL(URL(adresse), suite).toString()
             connexion.disconnect()
-            connexion = ouvrir(adresse)
+            connexion = ouvrir(adresse, entetes)
             redirections++
         }
         val code = connexion.responseCode
@@ -213,14 +216,37 @@ object Telechargeur {
         dest
     }
 
-    private fun ouvrir(adresse: String): HttpURLConnection {
+    private fun ouvrir(adresse: String, entetes: Map<String, String> = emptyMap()): HttpURLConnection {
         val c = URL(adresse).openConnection() as HttpURLConnection
         c.instanceFollowRedirects = false
         c.connectTimeout = 20_000
         c.readTimeout = 30_000
         c.setRequestProperty("User-Agent", AGENT_MOBILE)
         CookieManager.getInstance().getCookie(adresse)?.let { c.setRequestProperty("Cookie", it) }
+        entetes.forEach { (k, v) -> c.setRequestProperty(k, v) }
         return c
+    }
+
+    /** Vidéo TikTok (onglet TikTok) : le fichier demande la connexion TikTok et la page d'origine. */
+    suspend fun telechargerTikTok(ctx: Context, lien: String, prive: Boolean): Media {
+        commencer()
+        try {
+            val cookies = CookieManager.getInstance().getCookie("https://www.tiktok.com") ?: ""
+            val entetes = mapOf(
+                "Referer" to "https://www.tiktok.com/",
+                "Origin" to "https://www.tiktok.com",
+                "Cookie" to cookies,
+                "Range" to "bytes=0-",
+            )
+            val f = telechargerBrut(ctx, lien, 0f, 1f, entetes)
+            val mp4 = File(f.parentFile, UUID.randomUUID().toString() + ".mp4")
+            f.renameTo(mp4)
+            val nom = "TikTok " + SimpleDateFormat("yyyy-MM-dd HH'h'mm", Locale.ROOT).format(Date())
+            return Bibliotheque.importerFichier(mp4, nom, prive)
+                ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_ajout))
+        } finally {
+            finir()
+        }
     }
 
     private fun extension(lien: String, type: String?, disposition: String?): String {

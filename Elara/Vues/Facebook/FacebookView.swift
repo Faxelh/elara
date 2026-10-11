@@ -42,6 +42,7 @@ struct FacebookView: View {
                 }
                 .onAppear { pleinEcran = navigateur.surReel }
                 .navigationTitle("Facebook")
+                .toolbar { ToolbarItem(placement: .principal) { SelecteurReseau() } }
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarLeading) {

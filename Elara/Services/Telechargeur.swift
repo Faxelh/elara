@@ -106,8 +106,11 @@ final class Telechargeur {
     }
 
     /// Télécharge un fichier dans un dossier temporaire et renvoie son emplacement.
-    private func telechargerBrut(_ lien: URL, base: Double = 0, part: Double = 1) async throws -> URL {
-        try await withCheckedThrowingContinuation { suite in
+    private func telechargerBrut(_ lien: URL, base: Double = 0, part: Double = 1,
+                                 entetes: [String: String] = [:]) async throws -> URL {
+        var requete = URLRequest(url: lien)
+        for (cle, valeur) in entetes { requete.setValue(valeur, forHTTPHeaderField: cle) }
+        return try await withCheckedThrowingContinuation { suite in
             let delegue = DelegueTelechargement(
                 surProgres: { [weak self] p, o in
                     Task { @MainActor in
@@ -118,7 +121,7 @@ final class Telechargeur {
                 surFin: { resultat in suite.resume(with: resultat) }
             )
             let session = URLSession(configuration: .default, delegate: delegue, delegateQueue: nil)
-            let t = session.downloadTask(with: lien)
+            let t = session.downloadTask(with: requete)
             tache = t
             t.resume()
             session.finishTasksAndInvalidate()
@@ -126,6 +129,43 @@ final class Telechargeur {
     }
 
     #if PERSO
+    /// Vidéo TikTok (onglet Réseaux) : le fichier demande la connexion TikTok et la page d'origine.
+    func telechargerTikTok(_ lien: URL, cookies: String, vers bib: Bibliotheque, prive: Bool) async -> Media? {
+        erreur = nil
+        annule = false
+        enCours = true
+        progression = 0
+        octetsRecus = 0
+        defer { enCours = false; recherche = false; tache = nil }
+        do {
+            let entetes = [
+                "Referer": "https://www.tiktok.com/",
+                "Origin": "https://www.tiktok.com",
+                "Cookie": cookies,
+                "User-Agent": ExtracteurFacebook.agentMobile,
+                "Range": "bytes=0-",
+            ]
+            let recu = try await telechargerBrut(lien, entetes: entetes)
+            let format = DateFormatter()
+            format.dateFormat = "yyyy-MM-dd HH'h'mm"
+            let fichier = recu.deletingLastPathComponent().appendingPathComponent("TikTok " + format.string(from: Date()) + ".mp4")
+            try? FileManager.default.removeItem(at: fichier)
+            try FileManager.default.moveItem(at: recu, to: fichier)
+            guard let media = await bib.importer(depuis: fichier, deplacer: true, prive: prive) else {
+                erreur = String(localized: "Le fichier téléchargé n'a pas pu être ajouté.")
+                return nil
+            }
+            return media
+        } catch let e as URLError where e.code == .cancelled {
+            erreur = String(localized: "Téléchargement annulé.")
+        } catch let e as ErreurTelechargement {
+            erreur = e.message
+        } catch {
+            erreur = String(localized: "Le téléchargement a échoué : \(error.localizedDescription)")
+        }
+        return nil
+    }
+
     /// Reels : l'image et le son sont souvent deux fichiers. On télécharge les derniers fichiers vus,
     /// on repère ceux qui contiennent l'image et le son, puis on les assemble.
     func telechargerFlux(_ candidats: [URL], vers bib: Bibliotheque, prive: Bool) async -> Media? {

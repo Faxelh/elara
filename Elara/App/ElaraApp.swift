@@ -74,26 +74,20 @@ struct RacineView: View {
                 .tabItem { Label("Transfert", systemImage: "arrow.up.arrow.down.circle.fill") }
                 .tag(1)
             #if PERSO
-            FacebookView()
-                .tabItem { Label("Facebook", systemImage: "play.rectangle.on.rectangle.fill") }
+            // Facebook, TikTok et YouTube réunis dans un seul onglet.
+            ReseauxView()
+                .tabItem { Label("Réseaux", systemImage: "play.rectangle.on.rectangle.fill") }
                 .tag(5)
-            YouTubeView()
-                .tabItem { Label("YouTube", systemImage: "play.tv.fill") }
-                .tag(6)
-            #else
-            // Version perso : Compresser est dans le menu + de l'accueil (5 onglets maximum sur iPhone).
+            #endif
             CompresserView()
                 .tabItem { Label("Compresser", systemImage: "rectangle.compress.vertical") }
                 .tag(2)
-            #endif
             ReglagesView()
                 .tabItem { Label("Réglages", systemImage: "gearshape.fill") }
                 .tag(3)
         }
         .onAppear {
-            #if PERSO
-            if onglet == 2 { onglet = 0 }   // l'ancien onglet Compresser n'existe plus
-            #endif
+            if onglet == 6 { onglet = 5 }   // l'ancien onglet YouTube est dans « Réseaux »
         }
         #if PERSO
         .modifier(ModifMiseAJour())

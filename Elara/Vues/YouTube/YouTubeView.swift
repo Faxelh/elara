@@ -80,6 +80,7 @@ struct YouTubeView: View {
                     }
                 }
                 .navigationTitle("YouTube")
+                .toolbar { ToolbarItem(placement: .principal) { SelecteurReseau() } }
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarLeading) {

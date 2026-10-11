@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartDisplay
+import androidx.compose.material.icons.filled.MusicVideo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -48,7 +49,7 @@ fun Racine(activite: MainActivity) {
         return
     }
     var pleinEcranFacebook by remember { mutableStateOf(false) }
-    val onglet = Reglages.ongletActuel.coerceIn(0, 3)
+    val onglet = Reglages.ongletActuel.coerceIn(0, 4)
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -71,6 +72,11 @@ fun Racine(activite: MainActivity) {
                             label = { Text("Facebook") }, colors = couleurs,
                         )
                         NavigationBarItem(
+                            selected = onglet == 4, onClick = { Reglages.changerOnglet(4) },
+                            icon = { Icon(Icons.Filled.MusicVideo, null) },
+                            label = { Text("TikTok") }, colors = couleurs,
+                        )
+                        NavigationBarItem(
                             selected = onglet == 3, onClick = { Reglages.changerOnglet(3) },
                             icon = { Icon(Icons.Filled.SmartDisplay, null) },
                             label = { Text("YouTube") }, colors = couleurs,
@@ -88,6 +94,7 @@ fun Racine(activite: MainActivity) {
                 0 -> AccueilEcran(marges, activite)
                 1 -> FacebookEcran(marges, pleinEcranFacebook) { pleinEcranFacebook = it }
                 3 -> com.kounandi.elara.ui.youtube.YouTubeEcran(marges)
+                4 -> com.kounandi.elara.ui.tiktok.TikTokEcran(marges)
                 else -> ReglagesEcran(marges, activite)
             }
         }
