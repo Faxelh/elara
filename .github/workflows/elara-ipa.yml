@@ -16,6 +16,11 @@ on:
       - ".github/workflows/elara-apk.yml"
   workflow_dispatch:
 
+# Si une nouvelle compilation démarre, l'ancienne s'arrête (évite les doublons).
+concurrency:
+  group: elara-ipa
+  cancel-in-progress: true
+
 jobs:
   ipa:
     runs-on: macos-15
@@ -98,6 +103,11 @@ jobs:
           DEPOT: ${{ github.repository }}
         run: |
           NUMERO=$ELARA_BUILD
+          # Deux compilations lancées la même minute : la seconde n'a rien à publier.
+          if gh release view "ios-$NUMERO" --repo "$DEPOT" > /dev/null 2>&1; then
+            echo "La version ios-$NUMERO est déjà publiée."
+            exit 0
+          fi
           gh release create "ios-$NUMERO" build/ipa/Elara.ipa \
             --repo "$DEPOT" --title "Elara iPhone $ELARA_VERSION" \
             --notes "$(git log -1 --pretty=%s)" --target "${{ github.sha }}"
