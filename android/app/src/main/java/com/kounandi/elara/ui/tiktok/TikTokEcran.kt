@@ -139,7 +139,8 @@ object NavigateurTikTok {
                 return null
             }
         }
-        w.loadUrl(Reglages.texte("tiktok.page")?.takeIf { Uri.parse(it).host?.contains("tiktok.com") == true } ?: ACCUEIL)
+        // Toujours sur « Pour toi » : une page vidéo seule (lien /video/) bloque le défilement.
+        w.loadUrl(ACCUEIL)
         vue = w
         return w
     }

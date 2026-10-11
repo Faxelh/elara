@@ -37,11 +37,9 @@ final class NavigateurTikTok: NSObject, WKNavigationDelegate, WKScriptMessageHan
         observation = vue.observe(\.url, options: [.new]) { [weak self] _, _ in
             Task { @MainActor in self?.majBoutons() }
         }
-        var depart = Self.accueil
-        if let texte = UserDefaults.standard.string(forKey: Self.cleDernierePage),
-           let url = URL(string: texte), url.host?.contains("tiktok.com") == true {
-            depart = url
-        }
+        // Toujours sur « Pour toi » : une page vidéo seule (lien /video/) bloque le défilement
+        // et ramène sans cesse à la même vidéo.
+        let depart = Self.accueil
         vue.load(URLRequest(url: depart))
     }
 
