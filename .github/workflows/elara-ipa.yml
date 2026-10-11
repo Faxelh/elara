@@ -1,0 +1,146 @@
+# Compile Elara et produit Elara.ipa (non signé) sur les Mac gratuits de GitHub.
+# À installer ensuite avec Sideloadly ou 3uTools.
+# Version PERSO : inclut le téléchargement des vidéos Facebook.
+# Ne PAS envoyer cette version sur l'App Store (Apple la refuserait) :
+# la version App Store est compilée sans « PERSO » (workflow Codemagic elara-testflight).
+name: Elara – IPA
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "android/**"
+      - ".github/workflows/elara-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Version affichée : contenu du fichier VERSION (ex. 2026.2) + nombre de mises à jour
+      # depuis sa dernière modification → 2026.2.0, 2026.2.1, 2026.2.2…
+      - name: Calculer la version
+        run: |
+          BASE=$(head -n 1 "$GITHUB_WORKSPACE/VERSION" | tr -d '[:space:]')
+          DEPUIS=$(git -C "$GITHUB_WORKSPACE" log -1 --format=%H -- VERSION)
+          if [ -n "$DEPUIS" ]; then N=$(git -C "$GITHUB_WORKSPACE" rev-list --count "$DEPUIS"..HEAD); else N=0; fi
+          echo "ELARA_VERSION=$BASE.$N" >> "$GITHUB_ENV"
+          echo "Version : $BASE.$N"
+
+      - name: Préparer les outils
+        run: |
+          brew install xcodegen
+          python3 -m pip install --quiet --break-system-packages pillow || python3 -m pip install --quiet pillow
+
+      - name: Générer l'icône et le projet Xcode
+        run: |
+          python3 scripts/icone.py
+          xcodegen generate
+
+      - name: Compiler pour iPhone (sans signature)
+        run: |
+          mkdir -p build
+          set +e
+          xcodebuild build \
+            -project Elara.xcodeproj \
+            -scheme Elara \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -configuration Release \
+            -derivedDataPath build/derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS=PERSO \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            MARKETING_VERSION=$ELARA_VERSION > build/xcodebuild.log 2>&1
+          statut=$?
+          set -e
+          grep -E "error:|\*\* BUILD" build/xcodebuild.log || true
+          if [ $statut -ne 0 ]; then
+            echo "::error::La compilation a échoué. Voir les lignes « error: » ci-dessus."
+            exit 1
+          fi
+          # Vérifie que l'exécutable existe vraiment (sinon l'IPA serait invalide).
+          test -f build/derived/Build/Products/Release-iphoneos/Elara.app/Elara
+
+      - name: Créer Elara.ipa
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/derived/Build/Products/Release-iphoneos/Elara.app build/ipa/Payload/
+          cd build/ipa && zip -qry Elara.ipa Payload
+          ls -lh Elara.ipa
+
+      - name: Mettre Elara.ipa à disposition
+        uses: actions/upload-artifact@v4
+        with:
+          name: Elara-ipa-perso
+          path: build/ipa/Elara.ipa
+          retention-days: 14
+
+      # Publie l'IPA dans « Releases » (Elara signale la nouvelle version) et met à jour
+      # la source SideStore / AltStore pour les mises à jour automatiques.
+      - name: Publier la mise à jour
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUMERO: ${{ github.run_number }}
+          DEPOT: ${{ github.repository }}
+        run: |
+          gh release create "ios-$NUMERO" build/ipa/Elara.ipa \
+            --repo "$DEPOT" --title "Elara iPhone $ELARA_VERSION" \
+            --notes "$(git log -1 --pretty=%s)" --target "${{ github.sha }}"
+          TAILLE=$(stat -f%z build/ipa/Elara.ipa)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BASE="https://github.com/$DEPOT/releases/download"
+          cat > build/source.json <<JSON
+          {
+            "name": "Elara",
+            "identifier": "com.kounandi.elara.source",
+            "subtitle": "Lecteur vidéo et audio",
+            "apps": [{
+              "name": "Elara",
+              "bundleIdentifier": "com.kounandi.elara",
+              "developerName": "Faxel Kwadio",
+              "subtitle": "Lecteur vidéo et audio",
+              "localizedDescription": "Lecteur vidéo et audio, dossier privé, transfert Wi-Fi, téléchargements.",
+              "iconURL": "$BASE/ios-source/icone.png",
+              "tintColor": "735CF5",
+              "versions": [{
+                "version": "$ELARA_VERSION",
+                "buildVersion": "$NUMERO",
+                "date": "$DATE",
+                "downloadURL": "$BASE/ios-$NUMERO/Elara.ipa",
+                "size": $TAILLE,
+                "minOSVersion": "17.0"
+              }]
+            }],
+            "news": []
+          }
+          JSON
+          ICONE=$(find Elara -name "*.png" -path "*AppIcon*" | head -n 1)
+          cp "$ICONE" build/icone.png
+          gh release delete ios-source --repo "$DEPOT" --yes --cleanup-tag || true
+          gh release create ios-source build/source.json build/icone.png \
+            --repo "$DEPOT" --title "Source SideStore / AltStore" --latest=false \
+            --notes "Ajoutez cette adresse dans SideStore ou AltStore : $BASE/ios-source/source.json"
+          # On garde seulement les 5 dernières versions iPhone.
+          gh release list --repo "$DEPOT" --limit 100 --json tagName -q '.[].tagName' \
+            | grep -E '^ios-[0-9]+$' | sort -t- -k2 -n -r | tail -n +6 \
+            | xargs -I{} gh release delete {} --repo "$DEPOT" --yes --cleanup-tag || true
+
+      - name: Journal de compilation (en cas d'erreur)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-xcodebuild
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
