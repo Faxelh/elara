@@ -83,11 +83,15 @@ object AntiApp {
         var dedans = boite.querySelectorAll('button, a, [role="button"], div[aria-label], span[aria-label]');
         for (var j = 0; j < dedans.length; j++) { if (estRefus(dedans[j])) { refus = dedans[j]; break; } }
         if (refus) { try { refus.click(); } catch (e) {} setTimeout(debloquerDefilement, 300); continue; }
-        // Bandeau seul (peu d'autres boutons) : on le cache entièrement.
-        var autres = boite.querySelectorAll('button, a, [role="button"]').length;
-        if (autres <= 2 && texte(boite).length < 300) { cacher(boite); debloquerDefilement(); continue; }
+        // Vraie fenêtre (role="dialog") sans bouton de refus : on la cache, elle seule.
+        var dialogue = el.closest('[role="dialog"], [aria-modal="true"]');
+        if (dialogue && texte(dialogue).length < 300) { cacher(dialogue); debloquerDefilement(); continue; }
       }
-      // Bouton dans une barre utile (menu, recherche…) : on ne cache que lui.
+      // Sinon on ne cache que le bouton lui-même : la page (vidéos, menu, recherche) reste intacte.
+      // Jamais un élément qui contient une vidéo ou qui couvre une grande partie de l'écran.
+      if (el.querySelector('video, img, canvas')) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width * r.height > innerWidth * innerHeight * 0.15) continue;
       cacher(el);
     }
   }
