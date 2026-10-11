@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="medias" path="medias/" />
+    <files-path name="prive" path="prive/" />
+    <cache-path name="maj" path="maj/" />
+</paths>

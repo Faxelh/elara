@@ -1,0 +1,456 @@
+import Foundation
+import AVFoundation
+import UIKit
+import Observation
+
+/// Gère les médias de l'app.
+/// - Médias normaux : dossier Documents (visible aussi depuis l'app Fichiers).
+/// - Médias privés : dossier caché « Coffre », invisible dans l'app Fichiers.
+@MainActor
+@Observable
+final class Bibliotheque {
+    private(set) var tous: [Media] = []
+    private(set) var dossiers: [Dossier] = []
+    var importEnCours = false
+    /// Dernier fichier refusé parce qu'il était déjà dans Elara (affiché quelques secondes).
+    private(set) var dernierDoublon: Media?
+
+    var medias: [Media] { tous.filter { !$0.estPrive } }
+    var mediasPrives: [Media] { tous.filter { $0.estPrive } }
+
+    static let extensionsVideo: Set<String> = ["mp4", "mov", "m4v", "3gp"]
+    static let extensionsAudio: Set<String> = ["mp3", "m4a", "aac", "wav", "aif", "aiff", "caf", "flac"]
+
+    let dossierMedias: URL
+    @ObservationIgnored private let dossierCoffre: URL
+    @ObservationIgnored private let fichierIndex: URL
+    @ObservationIgnored private let fichierDossiers: URL
+    @ObservationIgnored private let dossierMiniatures: URL
+    @ObservationIgnored private let dossierMiniaturesPrivees: URL
+    @ObservationIgnored private var enTraitement = Set<String>()
+    @ObservationIgnored private var synchroEnCours = false
+
+    init() {
+        let fm = FileManager.default
+        dossierMedias = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+
+        let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? fm.createDirectory(at: support, withIntermediateDirectories: true)
+        fichierIndex = support.appendingPathComponent("bibliotheque.json")
+        fichierDossiers = support.appendingPathComponent("dossiers.json")
+
+        dossierCoffre = support.appendingPathComponent("Coffre", isDirectory: true)
+        dossierMiniaturesPrivees = dossierCoffre.appendingPathComponent(".miniatures", isDirectory: true)
+        try? fm.createDirectory(at: dossierMiniaturesPrivees, withIntermediateDirectories: true)
+
+        let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        dossierMiniatures = caches.appendingPathComponent("miniatures", isDirectory: true)
+        try? fm.createDirectory(at: dossierMiniatures, withIntermediateDirectories: true)
+
+        charger()
+    }
+
+    // MARK: - Chemins
+
+    func url(de media: Media) -> URL {
+        (media.estPrive ? dossierCoffre : dossierMedias).appendingPathComponent(media.fichier)
+    }
+
+    func urlMiniature(de media: Media) -> URL {
+        (media.estPrive ? dossierMiniaturesPrivees : dossierMiniatures)
+            .appendingPathComponent(media.id.uuidString + ".jpg")
+    }
+
+    static func type(pour ext: String) -> TypeMedia? {
+        let e = ext.lowercased()
+        if extensionsVideo.contains(e) { return .video }
+        if extensionsAudio.contains(e) { return .audio }
+        return nil
+    }
+
+    // MARK: - Import
+
+    /// Copie (ou déplace) un fichier dans la bibliothèque, ou directement dans le dossier privé.
+    @discardableResult
+    func importer(depuis source: URL, deplacer: Bool = false, prive: Bool = false, dossier: UUID? = nil) async -> Media? {
+        guard let type = Self.type(pour: source.pathExtension) else { return nil }
+        let acces = source.startAccessingSecurityScopedResource()
+        defer { if acces { source.stopAccessingSecurityScopedResource() } }
+
+        // Doublon : le même fichier est déjà dans Elara, on ne l'ajoute pas une deuxième fois.
+        if let existant = await doublon(de: source) {
+            if deplacer { try? FileManager.default.removeItem(at: source) }
+            signalerDoublon(existant)
+            return existant
+        }
+
+        let destination = urlLibre(pour: source.lastPathComponent, dans: prive ? dossierCoffre : dossierMedias)
+        enTraitement.insert(destination.lastPathComponent)
+        do {
+            if deplacer {
+                try FileManager.default.moveItem(at: source, to: destination)
+            } else {
+                try FileManager.default.copyItem(at: source, to: destination)
+            }
+        } catch {
+            enTraitement.remove(destination.lastPathComponent)
+            return nil
+        }
+        if prive { proteger(destination) }
+        return await ajouter(fichier: destination, type: type, prive: prive, dossier: dossier)
+    }
+
+    @discardableResult
+    private func ajouter(fichier: URL, type: TypeMedia, prive: Bool = false, dossier: UUID? = nil) async -> Media {
+        let nomFichier = fichier.lastPathComponent
+        enTraitement.insert(nomFichier)
+        defer { enTraitement.remove(nomFichier) }
+
+        let asset = AVURLAsset(url: fichier)
+        let duree = (try? await asset.load(.duration))?.seconds ?? 0
+        let attributs = try? FileManager.default.attributesOfItem(atPath: fichier.path)
+        let taille = (attributs?[.size] as? NSNumber)?.int64Value ?? 0
+
+        var media = Media(
+            nom: fichier.deletingPathExtension().lastPathComponent,
+            fichier: nomFichier,
+            type: type,
+            taille: taille,
+            duree: duree.isFinite ? duree : 0,
+            prive: prive ? true : nil,
+            dossier: prive ? nil : dossier
+        )
+        media.empreinte = await Empreinte.calculerEnArrierePlan(fichier)
+        if type == .video {
+            await genererMiniature(media, asset: asset)
+        }
+        tous.insert(media, at: 0)
+        enregistrer()
+        return media
+    }
+
+    /// Change quand des miniatures sont refaites : les vignettes se redessinent.
+    private(set) var versionMiniatures = 0
+
+    private func genererMiniature(_ media: Media, asset: AVURLAsset) async {
+        let generateur = AVAssetImageGenerator(asset: asset)
+        generateur.appliesPreferredTrackTransform = true
+        generateur.maximumSize = CGSize(width: 480, height: 480)
+        generateur.requestedTimeToleranceBefore = CMTime(seconds: 2, preferredTimescale: 600)
+        generateur.requestedTimeToleranceAfter = CMTime(seconds: 2, preferredTimescale: 600)
+        // On évite les images noires du début (fondu, écran titre) : on essaie plusieurs moments.
+        let d = max(media.duree, 0.1)
+        let moments = [d * 0.15, d * 0.35, d * 0.5, min(1, d / 2)]
+        var choisie: CGImage?
+        for seconde in moments {
+            guard let resultat = try? await generateur.image(at: CMTime(seconds: seconde, preferredTimescale: 600)) else { continue }
+            if choisie == nil { choisie = resultat.image }
+            if Self.luminosite(resultat.image) > 0.08 { choisie = resultat.image; break }
+        }
+        guard let image = choisie, let data = UIImage(cgImage: image).jpegData(compressionQuality: 0.75) else { return }
+        let cible = urlMiniature(de: media)
+        try? data.write(to: cible)
+        if media.estPrive { proteger(cible) }
+    }
+
+    /// Luminosité moyenne (0 = noir, 1 = blanc), calculée sur une image réduite à 8 × 8.
+    private static func luminosite(_ image: CGImage) -> Double {
+        let cote = 8
+        var pixels = [UInt8](repeating: 0, count: cote * cote * 4)
+        let total: Double = pixels.withUnsafeMutableBytes { tampon -> Double in
+            guard let contexte = CGContext(
+                data: tampon.baseAddress, width: cote, height: cote, bitsPerComponent: 8, bytesPerRow: cote * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return 255 * Double(cote * cote) }
+            contexte.draw(image, in: CGRect(x: 0, y: 0, width: cote, height: cote))
+            let octets = tampon.bindMemory(to: UInt8.self)
+            var somme = 0.0
+            for i in stride(from: 0, to: octets.count, by: 4) {
+                somme += 0.299 * Double(octets[i]) + 0.587 * Double(octets[i + 1]) + 0.114 * Double(octets[i + 2])
+            }
+            return somme
+        }
+        return total / Double(cote * cote) / 255
+    }
+
+    /// Refait une seule fois les miniatures des vidéos déjà présentes (anciennes miniatures parfois noires).
+    func rafraichirMiniatures() async {
+        let cle = "miniatures.v2"
+        guard !UserDefaults.standard.bool(forKey: cle) else { return }
+        for media in tous where media.type == .video {
+            await genererMiniature(media, asset: AVURLAsset(url: url(de: media)))
+        }
+        UserDefaults.standard.set(true, forKey: cle)
+        versionMiniatures += 1
+    }
+
+    /// Ajoute les fichiers déposés via l'app Fichiers et retire ceux qui ont disparu.
+    func synchroniserDossier() async {
+        guard !synchroEnCours else { return }
+        synchroEnCours = true
+        defer { synchroEnCours = false }
+
+        let contenu = (try? FileManager.default.contentsOfDirectory(
+            at: dossierMedias, includingPropertiesForKeys: nil)) ?? []
+        for fichier in contenu {
+            let nom = fichier.lastPathComponent
+            guard !enTraitement.contains(nom),
+                  !tous.contains(where: { !$0.estPrive && $0.fichier == nom }),
+                  let type = Self.type(pour: fichier.pathExtension) else { continue }
+            await ajouter(fichier: fichier, type: type)
+        }
+
+        let avant = tous.count
+        tous.removeAll { !FileManager.default.fileExists(atPath: url(de: $0).path) }
+        if tous.count != avant { enregistrer() }
+        await rafraichirMiniatures()
+    }
+
+    // MARK: - Doublons
+
+    /// Média déjà présent avec exactement le même contenu (même taille, même empreinte).
+    func doublon(de fichier: URL) async -> Media? {
+        let attributs = try? FileManager.default.attributesOfItem(atPath: fichier.path)
+        guard let taille = (attributs?[.size] as? NSNumber)?.int64Value else { return nil }
+        let candidats = tous.filter { $0.taille == taille }
+        guard !candidats.isEmpty, let empreinte = await Empreinte.calculerEnArrierePlan(fichier) else { return nil }
+        for candidat in candidats {
+            if await empreinteDe(candidat) == empreinte { return candidat }
+        }
+        return nil
+    }
+
+    /// Empreinte d'un média (calculée puis gardée si elle manque).
+    private func empreinteDe(_ media: Media) async -> String? {
+        if let e = media.empreinte { return e }
+        let e = await Empreinte.calculerEnArrierePlan(url(de: media))
+        if let i = tous.firstIndex(where: { $0.id == media.id }) {
+            tous[i].empreinte = e
+            enregistrer()
+        }
+        return e
+    }
+
+    private func signalerDoublon(_ media: Media) {
+        dernierDoublon = media
+        Task {
+            try? await Task.sleep(for: .seconds(4))
+            if dernierDoublon?.id == media.id { dernierDoublon = nil }
+        }
+    }
+
+    func estDoublonSignale(_ media: Media) -> Bool { dernierDoublon?.id == media.id }
+
+    /// Supprime les copies en double (on garde la plus ancienne). Renvoie le nombre supprimé.
+    func supprimerDoublons() async -> Int {
+        var supprimes = 0
+        let groupes = Dictionary(grouping: tous, by: { $0.taille }).values.filter { $0.count > 1 }
+        for groupe in groupes {
+            var vus: [String: Media] = [:]
+            for media in groupe.sorted(by: { $0.dateAjout < $1.dateAjout }) {
+                guard let e = await empreinteDe(media) else { continue }
+                if vus[e] != nil {
+                    supprimer(media)
+                    supprimes += 1
+                } else {
+                    vus[e] = media
+                }
+            }
+        }
+        return supprimes
+    }
+
+    // MARK: - Dossier privé
+
+    /// Range un média dans le dossier privé (ou l'en sort).
+    func definirPrive(_ media: Media, _ prive: Bool) {
+        guard let i = tous.firstIndex(where: { $0.id == media.id }), tous[i].estPrive != prive else { return }
+        let ancien = tous[i]
+        var nouveau = ancien
+        nouveau.prive = prive ? true : nil
+        let destination = urlLibre(pour: ancien.fichier, dans: prive ? dossierCoffre : dossierMedias)
+        nouveau.fichier = destination.lastPathComponent
+
+        do {
+            try FileManager.default.moveItem(at: url(de: ancien), to: destination)
+        } catch {
+            return
+        }
+        try? FileManager.default.moveItem(at: urlMiniature(de: ancien), to: urlMiniature(de: nouveau))
+        if prive {
+            proteger(destination)
+            nouveau.derniereLecture = nil
+            nouveau.dossier = nil
+        }
+        tous[i] = nouveau
+        enregistrer()
+    }
+
+    /// Remplace le fichier d'un média par une nouvelle version (ex. vidéo compressée).
+    func remplacer(_ media: Media, par source: URL) {
+        guard let i = tous.firstIndex(where: { $0.id == media.id }) else { return }
+        let dossier = media.estPrive ? dossierCoffre : dossierMedias
+        let base = (media.fichier as NSString).deletingPathExtension
+        let ancien = url(de: media)
+        try? FileManager.default.removeItem(at: ancien)
+        let destination = urlLibre(pour: base + "." + source.pathExtension, dans: dossier)
+        do {
+            try FileManager.default.moveItem(at: source, to: destination)
+        } catch {
+            return
+        }
+        if media.estPrive { proteger(destination) }
+        let attributs = try? FileManager.default.attributesOfItem(atPath: destination.path)
+        tous[i].fichier = destination.lastPathComponent
+        tous[i].taille = (attributs?[.size] as? NSNumber)?.int64Value ?? tous[i].taille
+        enregistrer()
+    }
+
+    /// Le fichier reste lisible pendant la lecture, mais est chiffré quand l'iPhone est verrouillé.
+    private func proteger(_ url: URL) {
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUnlessOpen],
+            ofItemAtPath: url.path
+        )
+    }
+
+    // MARK: - Dossiers de l'accueil
+
+    func mediasDans(_ dossier: UUID?) -> [Media] {
+        medias.filter { $0.dossier == dossier }
+    }
+
+    func nombre(dans dossier: Dossier) -> Int {
+        medias.filter { $0.dossier == dossier.id }.count
+    }
+
+    @discardableResult
+    func creerDossier(_ nom: String) -> Dossier? {
+        let propre = String(nom.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Dossier.longueurMax))
+        guard !propre.isEmpty else { return nil }
+        let dossier = Dossier(nom: propre)
+        dossiers.append(dossier)
+        enregistrerDossiers()
+        return dossier
+    }
+
+    func renommerDossier(_ dossier: Dossier, en nom: String) {
+        let propre = String(nom.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Dossier.longueurMax))
+        guard !propre.isEmpty, let i = dossiers.firstIndex(where: { $0.id == dossier.id }) else { return }
+        dossiers[i].nom = propre
+        enregistrerDossiers()
+    }
+
+    /// Supprime le dossier ; ses médias reviennent sur l'accueil.
+    func supprimerDossier(_ dossier: Dossier) {
+        for i in tous.indices where tous[i].dossier == dossier.id {
+            tous[i].dossier = nil
+        }
+        dossiers.removeAll { $0.id == dossier.id }
+        enregistrer()
+        enregistrerDossiers()
+    }
+
+    func deplacer(_ media: Media, vers dossier: UUID?) {
+        guard let i = tous.firstIndex(where: { $0.id == media.id }) else { return }
+        tous[i].dossier = dossier
+        enregistrer()
+    }
+
+    // MARK: - Modifications
+
+    func supprimer(_ media: Media) {
+        try? FileManager.default.removeItem(at: url(de: media))
+        try? FileManager.default.removeItem(at: urlMiniature(de: media))
+        tous.removeAll { $0.id == media.id }
+        enregistrer()
+    }
+
+    func renommer(_ media: Media, en nom: String) {
+        let propre = nom.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !propre.isEmpty, let i = tous.firstIndex(where: { $0.id == media.id }) else { return }
+        tous[i].nom = propre
+        enregistrer()
+    }
+
+    func memoriserPosition(_ id: UUID, _ position: Double) {
+        guard let i = tous.firstIndex(where: { $0.id == id }) else { return }
+        tous[i].position = position.isFinite ? max(0, position) : 0
+        if !tous[i].estPrive { tous[i].derniereLecture = Date() }
+        enregistrer()
+    }
+
+    func media(id: UUID) -> Media? {
+        tous.first { $0.id == id }
+    }
+
+    // MARK: - Historique (sans les médias privés)
+
+    var historique: [Media] {
+        medias
+            .filter { $0.derniereLecture != nil }
+            .sorted { ($0.derniereLecture ?? .distantPast) > ($1.derniereLecture ?? .distantPast) }
+    }
+
+    func effacerHistorique() {
+        for i in tous.indices where !tous[i].estPrive {
+            tous[i].derniereLecture = nil
+            tous[i].position = 0
+        }
+        enregistrer()
+    }
+
+    // MARK: - Cache
+
+    func tailleCache() -> Int64 {
+        let fm = FileManager.default
+        guard let e = fm.enumerator(at: fm.temporaryDirectory, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
+        var total: Int64 = 0
+        for case let url as URL in e {
+            total += Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+        return total
+    }
+
+    func viderCache() {
+        let fm = FileManager.default
+        let elements = (try? fm.contentsOfDirectory(at: fm.temporaryDirectory, includingPropertiesForKeys: nil)) ?? []
+        for url in elements { try? fm.removeItem(at: url) }
+    }
+
+    // MARK: - Persistance
+
+    private func charger() {
+        if let data = try? Data(contentsOf: fichierDossiers),
+           let liste = try? JSONDecoder().decode([Dossier].self, from: data) {
+            dossiers = liste
+        }
+        guard let data = try? Data(contentsOf: fichierIndex),
+              let liste = try? JSONDecoder().decode([Media].self, from: data) else { return }
+        tous = liste.filter { FileManager.default.fileExists(atPath: url(de: $0).path) }
+    }
+
+    private func enregistrerDossiers() {
+        if let data = try? JSONEncoder().encode(dossiers) {
+            try? data.write(to: fichierDossiers, options: .atomic)
+        }
+    }
+
+    private func enregistrer() {
+        if let data = try? JSONEncoder().encode(tous) {
+            try? data.write(to: fichierIndex, options: .atomic)
+        }
+    }
+
+    private func urlLibre(pour nom: String, dans dossier: URL) -> URL {
+        var url = dossier.appendingPathComponent(nom)
+        let base = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        var n = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = dossier.appendingPathComponent("\(base) (\(n)).\(ext)")
+            n += 1
+        }
+        return url
+    }
+}

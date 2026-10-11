@@ -1,0 +1,6 @@
+Elara.xcodeproj/
+Elara/Info.plist
+.DS_Store
+DerivedData/
+build/
+Elara/Assets.xcassets/AppIcon.appiconset/icone.png

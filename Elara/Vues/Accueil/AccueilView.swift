@@ -1,0 +1,368 @@
+import SwiftUI
+import UIKit
+
+struct AccueilView: View {
+    @Environment(Bibliotheque.self) private var bib
+    @AppStorage(Cle.vueAccueil) private var vue: VueAccueil = .grille
+    @AppStorage(Cle.triAccueil) private var tri: TriMedias = .date
+    @AppStorage(Cle.triCroissant) private var croissant = false
+
+    @State private var afficherPhotos = false
+    @State private var afficherFichiers = false
+    @State private var afficherPrive = false
+    @State private var afficherTelechargement = false
+    @State private var afficherEcran = false
+    @State private var nouveauDossier = false
+    @State private var afficherCompresser = false
+    @State private var lienInitial = ""
+    @State private var lienCopie = false
+    @AppStorage("presse-papiers-vu") private var pressePapiersVu = 0
+    @AppStorage("accueil.filtre") private var filtre: Filtre = .tout
+
+    enum Filtre: String, CaseIterable, Identifiable {
+        case tout = "Tout", videos = "Vidéos", audio = "Audio"
+        var id: String { rawValue }
+    }
+
+    private var mediasAffiches: [Media] {
+        let racine = bib.mediasDans(nil)
+        let filtres: [Media]
+        switch filtre {
+        case .tout: filtres = racine
+        case .videos: filtres = racine.filter { $0.type == .video }
+        case .audio: filtres = racine.filter { $0.type == .audio }
+        }
+        return tri.trier(filtres, croissant: croissant)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                // La barre « Tout / Vidéos / Audio » reste collée en haut pendant le défilement :
+                // on la touche toujours sans risquer d'ouvrir une vidéo.
+                LazyVStack(alignment: .leading, spacing: 20, pinnedViews: [.sectionHeaders]) {
+                    if lienCopie {
+                        BandeauLienCopie(
+                            telecharger: {
+                                lienInitial = UIPasteboard.general.url?.absoluteString
+                                    ?? UIPasteboard.general.string ?? ""
+                                pressePapiersVu = UIPasteboard.general.changeCount
+                                lienCopie = false
+                                afficherTelechargement = true
+                            },
+                            ignorer: {
+                                pressePapiersVu = UIPasteboard.general.changeCount
+                                lienCopie = false
+                            }
+                        )
+                    }
+                    HStack(spacing: 12) {
+                        CarteRaccourci(titre: "Photos", icone: "photo.on.rectangle.angled", couleur: Theme.bleu) {
+                            afficherPhotos = true
+                        }
+                        CarteRaccourci(titre: "Fichiers", icone: "folder.fill", couleur: Theme.vert) {
+                            afficherFichiers = true
+                        }
+                        CarteRaccourci(titre: "Privé", icone: "lock.fill", couleur: Theme.corail) {
+                            afficherPrive = true
+                        }
+                    }
+
+                    if !bib.dossiers.isEmpty {
+                        VStack(spacing: 8) {
+                            ForEach(bib.dossiers) { dossier in
+                                NavigationLink(value: dossier) {
+                                    TuileDossier(dossier: dossier, nombre: bib.nombre(dans: dossier))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    Section {
+                    if bib.importEnCours {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text("Importation en cours…").foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if mediasAffiches.isEmpty {
+                        ContentUnavailableView(
+                            "Aucun média",
+                            systemImage: "shippingbox",
+                            description: Text("Touchez + pour importer des vidéos ou de la musique, télécharger un lien ou créer un dossier.")
+                        )
+                        .padding(.top, 30)
+                    } else {
+                        ListeMedias(medias: mediasAffiches, vue: vue)
+                    }
+                    } header: {
+                        Picker("Filtre", selection: $filtre) {
+                            ForEach(Filtre.allCases) { Text(LocalizedStringKey($0.rawValue)).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .controlSize(.large)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                        .background(Color(.systemBackground))
+                        .padding(.horizontal, -16)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Elara")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button("Importer depuis Photos", systemImage: "photo") { afficherPhotos = true }
+                        Button("Importer depuis Fichiers", systemImage: "folder") { afficherFichiers = true }
+                        Button("Importer un enregistrement d'écran", systemImage: "record.circle") {
+                            afficherEcran = true
+                        }
+                        Button("Télécharger depuis un lien", systemImage: "arrow.down.circle") {
+                            lienInitial = ""
+                            afficherTelechargement = true
+                        }
+                        #if PERSO
+                        Button("Compresser des vidéos", systemImage: "rectangle.compress.vertical") {
+                            afficherCompresser = true
+                        }
+                        #endif
+                        Divider()
+                        Button("Nouveau dossier", systemImage: "folder.badge.plus") { nouveauDossier = true }
+                    } label: {
+                        Image(systemName: "plus.circle").font(.title3)
+                    }
+                    .accessibilityLabel("Ajouter")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    MenuAffichage()
+                }
+            }
+            .navigationDestination(for: Dossier.self) { dossier in
+                DossierView(dossierID: dossier.id)
+            }
+            .navigationDestination(isPresented: $afficherPrive) {
+                CoffreView()
+            }
+            .importMedias(photos: $afficherPhotos, fichiers: $afficherFichiers, ecran: $afficherEcran)
+            .sheet(isPresented: $afficherCompresser) {
+                CompresserView()
+            }
+            .sheet(isPresented: $afficherTelechargement) {
+                TelechargerView(lienInitial: lienInitial, demarrerSeul: !lienInitial.isEmpty)
+            }
+            .onAppear(perform: verifierPressePapiers)
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                verifierPressePapiers()
+            }
+            .alerteDossier($nouveauDossier) { nom in
+                bib.creerDossier(nom)
+            }
+            .refreshable { await bib.synchroniserDossier() }
+            .task { await bib.synchroniserDossier() }
+        }
+    }
+}
+
+extension AccueilView {
+    /// Propose de télécharger un lien copié (sans lire le presse-papiers, donc sans alerte iOS).
+    private func verifierPressePapiers() {
+        let pp = UIPasteboard.general
+        lienCopie = pp.hasURLs && pp.changeCount != pressePapiersVu
+    }
+}
+
+/// Bandeau « Un lien est copié ».
+struct BandeauLienCopie: View {
+    let telecharger: () -> Void
+    let ignorer: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "link.circle.fill")
+                .font(.title2)
+                .foregroundStyle(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Un lien est copié").font(.subheadline.bold())
+                Text("Le télécharger dans Elara ?").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Button("Télécharger", action: telecharger)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            Button(action: ignorer) {
+                Image(systemName: "xmark").font(.caption.bold())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("Ignorer")
+        }
+        .padding(12)
+        .background(Theme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+/// Contenu d'un dossier créé par l'utilisateur.
+struct DossierView: View {
+    let dossierID: UUID
+
+    @Environment(Bibliotheque.self) private var bib
+    @Environment(\.dismiss) private var retour
+    @AppStorage(Cle.vueAccueil) private var vue: VueAccueil = .grille
+    @AppStorage(Cle.triAccueil) private var tri: TriMedias = .date
+    @AppStorage(Cle.triCroissant) private var croissant = false
+    @State private var afficherPhotos = false
+    @State private var afficherFichiers = false
+    @State private var renommer = false
+    @State private var confirmerSuppression = false
+
+    private var dossier: Dossier? { bib.dossiers.first { $0.id == dossierID } }
+
+    var body: some View {
+        let medias = tri.trier(bib.mediasDans(dossierID), croissant: croissant)
+        ScrollView {
+            if medias.isEmpty {
+                ContentUnavailableView(
+                    "Dossier vide",
+                    systemImage: "folder",
+                    description: Text("Touchez + pour importer ici, ou appuyez longuement sur un média de l'accueil puis « Déplacer vers un dossier ».")
+                )
+                .padding(.top, 60)
+            } else {
+                ListeMedias(medias: medias, vue: vue).padding()
+            }
+        }
+        .navigationTitle(dossier?.nom ?? "Dossier")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Importer depuis Photos", systemImage: "photo") { afficherPhotos = true }
+                    Button("Importer depuis Fichiers", systemImage: "folder") { afficherFichiers = true }
+                } label: {
+                    Image(systemName: "plus.circle").font(.title3)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Renommer le dossier", systemImage: "pencil") { renommer = true }
+                    Button("Supprimer le dossier", systemImage: "trash", role: .destructive) {
+                        confirmerSuppression = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle").font(.title3)
+                }
+            }
+        }
+        .importMedias(photos: $afficherPhotos, fichiers: $afficherFichiers, dossier: dossierID)
+        .alerteDossier($renommer, titre: "Renommer le dossier", valeurInitiale: dossier?.nom ?? "") { nom in
+            if let dossier { bib.renommerDossier(dossier, en: nom) }
+        }
+        .confirmationDialog("Supprimer ce dossier ?", isPresented: $confirmerSuppression, titleVisibility: .visible) {
+            Button("Supprimer le dossier", role: .destructive) {
+                if let dossier { bib.supprimerDossier(dossier) }
+                retour()
+            }
+        } message: {
+            Text("Les médias qu'il contient ne sont pas supprimés : ils reviennent sur l'accueil.")
+        }
+    }
+}
+
+// MARK: - Composants
+
+struct CarteRaccourci: View {
+    let titre: LocalizedStringKey
+    let icone: String
+    let couleur: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: icone)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(couleur)
+                HStack(spacing: 4) {
+                    Text(titre).font(.subheadline.bold())
+                    Image(systemName: "chevron.right").font(.caption2.bold())
+                }
+                .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(couleur.opacity(0.12), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct VignetteMedia: View {
+    @Environment(Bibliotheque.self) private var bib
+    let media: Media
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Case carrée de taille fixe : l'image la remplit, quel que soit son format.
+            Color(.secondarySystemBackground)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay { apercu }
+                .overlay {
+                    // Léger dégradé pour lire la durée et la taille sur n'importe quelle image.
+                    LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .center, endPoint: .bottom)
+                        .allowsHitTesting(false)
+                }
+                .overlay(alignment: .bottom) {
+                    VStack(spacing: 4) {
+                        HStack {
+                            Pastille(texte: media.dureeTexte)
+                            Spacer(minLength: 2)
+                            Pastille(texte: media.tailleTexte)
+                        }
+                        if media.progression > 0.01 {
+                            ProgressView(value: media.progression)
+                                .tint(.white)
+                        }
+                    }
+                    .padding(6)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            Text(media.nom)
+                .font(.caption)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    @ViewBuilder
+    private var apercu: some View {
+        let _ = bib.versionMiniatures
+        if media.type == .video,
+           let image = UIImage(contentsOfFile: bib.urlMiniature(de: media).path) {
+            Image(uiImage: image).resizable().scaledToFill()
+        } else {
+            ZStack {
+                Theme.degrade
+                Image(systemName: media.type == .audio ? "music.note" : "film")
+                    .font(.largeTitle)
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+        }
+    }
+}
+
+struct Pastille: View {
+    let texte: String
+    var body: some View {
+        Text(texte)
+            .font(.caption2.monospacedDigit().weight(.semibold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(.black.opacity(0.55), in: Capsule())
+    }
+}
