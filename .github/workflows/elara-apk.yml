@@ -11,6 +11,11 @@ on:
 permissions:
   contents: write
 
+# Si une nouvelle compilation démarre, l'ancienne s'arrête (évite les doublons).
+concurrency:
+  group: elara-apk
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -62,6 +67,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if gh release view "android-$ELARA_BUILD" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "La version android-$ELARA_BUILD est déjà publiée."
+            exit 0
+          fi
           gh release create "android-$ELARA_BUILD" Elara.apk \
             --repo "${{ github.repository }}" \
             --title "Elara Android $ELARA_VERSION" \
@@ -71,4 +80,3 @@ jobs:
           gh release list --repo "${{ github.repository }}" --limit 100 --json tagName -q '.[].tagName' \
             | grep '^android-' | sort -t- -k2 -n -r | tail -n +6 \
             | xargs -r -I{} gh release delete {} --repo "${{ github.repository }}" --yes --cleanup-tag
-
