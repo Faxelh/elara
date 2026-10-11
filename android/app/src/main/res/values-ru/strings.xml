@@ -25,6 +25,7 @@
     <string name="code_longueur">От 4 до 8 цифр</string>
     <string name="codes_differents">Коды не совпадают. Попробуйте снова.</string>
     <string name="coller_lien">Вставить ссылку</string>
+    <string name="coller_lien_tiktok">Вставить ссылку TikTok</string>
     <string name="confirmer_code">Повторите код</string>
     <string name="confirmer_schema">Повторите графический ключ</string>
     <string name="continuer">Продолжить</string>
@@ -69,6 +70,7 @@
     <string name="langue_systeme">Язык телефона</string>
     <string name="lecture">Воспроизвести</string>
     <string name="lecture_auto">Автовоспроизведение</string>
+    <string name="lien_copie">Ссылка TikTok скопирована</string>
     <string name="lien_fichier">Ссылка на файл</string>
     <string name="maj_a_jour">Elara обновлена.</string>
     <string name="maj_autoriser">Разрешите Elara устанавливать приложения и снова нажмите «Обновить».</string>
@@ -89,10 +91,12 @@
     <string name="ok">OK</string>
     <string name="onglet_accueil">Главная</string>
     <string name="onglet_reglages">Настройки</string>
+    <string name="ouvrir_pour_telecharger">Открыть видео и скачать</string>
     <string name="ouvrir_prive">Открыть личную папку</string>
     <string name="page_precedente">Назад</string>
     <string name="page_suivante">Вперёд</string>
     <string name="partager">Поделиться</string>
+    <string name="pas_un_lien_tiktok">Это не ссылка TikTok. В TikTok: Поделиться → Копировать ссылку.</string>
     <string name="pause">Пауза</string>
     <string name="photos">Фото</string>
     <string name="piste_audio">Звуковая дорожка</string>

@@ -25,6 +25,7 @@
     <string name="code_longueur">4 à 8 chiffres</string>
     <string name="codes_differents">Les codes ne correspondent pas. Recommencez.</string>
     <string name="coller_lien">Coller le lien</string>
+    <string name="coller_lien_tiktok">Coller un lien TikTok</string>
     <string name="confirmer_code">Confirmez le code</string>
     <string name="confirmer_schema">Redessinez le schéma</string>
     <string name="continuer">Continuer</string>
@@ -69,6 +70,7 @@
     <string name="langue_systeme">Langue du téléphone</string>
     <string name="lecture">Lecture</string>
     <string name="lecture_auto">Lecture automatique</string>
+    <string name="lien_copie">Lien TikTok copié</string>
     <string name="lien_fichier">Lien du fichier</string>
     <string name="maj_a_jour">Elara est à jour.</string>
     <string name="maj_autoriser">Autorisez Elara à installer des applis, puis touchez à nouveau « Mettre à jour ».</string>
@@ -89,10 +91,12 @@
     <string name="ok">OK</string>
     <string name="onglet_accueil">Accueil</string>
     <string name="onglet_reglages">Réglages</string>
+    <string name="ouvrir_pour_telecharger">Ouvrir la vidéo et la télécharger</string>
     <string name="ouvrir_prive">Ouvrir le dossier privé</string>
     <string name="page_precedente">Page précédente</string>
     <string name="page_suivante">Page suivante</string>
     <string name="partager">Partager</string>
+    <string name="pas_un_lien_tiktok">Ce n\'est pas un lien TikTok. Dans TikTok : Partager → Copier le lien.</string>
     <string name="pause">Pause</string>
     <string name="photos">Photos</string>
     <string name="piste_audio">Piste audio</string>

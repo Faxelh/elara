@@ -37,6 +37,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayCircle
@@ -92,6 +94,9 @@ object NavigateurTikTok {
     var chargement by mutableStateOf(false); private set
     var peutReculer by mutableStateOf(false); private set
     var video by mutableStateOf<String?>(null)
+    /** Vidéo ouverte depuis un lien collé : son fichier, à télécharger tout de suite. */
+    var aTelecharger by mutableStateOf<String?>(null)
+    @Volatile private var attenteLien = false
     private val ignorees = mutableSetOf<String>()
     private val vus = ArrayList<String>()
 
@@ -149,6 +154,21 @@ object NavigateurTikTok {
     fun recharger() { vue?.reload() }
     fun allerAccueil() { vue?.loadUrl(ACCUEIL) }
 
+    /** Premier lien TikTok d'un texte (copié dans l'app TikTok : Partager → Copier le lien). */
+    fun lienTikTok(texte: String?): String? {
+        if (texte == null) return null
+        return Regex("https?://[^\\s]+").findAll(texte).map { it.value.trimEnd('.', ',', ')') }
+            .firstOrNull { Uri.parse(it).host?.lowercase()?.let { h -> h == "tiktok.com" || h.endsWith(".tiktok.com") } == true }
+    }
+
+    /** Ouvre la vidéo du lien ; dès qu'elle joue, elle est téléchargée. */
+    fun ouvrirLien(lien: String) {
+        video = null
+        aTelecharger = null
+        attenteLien = true
+        vue?.loadUrl(lien)
+    }
+
     fun fermerBandeau() { video?.let { ignorees += it }; video = null }
     fun marquerTelechargee(lien: String) { ignorees += lien }
 
@@ -167,6 +187,11 @@ object NavigateurTikTok {
         fun lecture(src: String) {
             principal.post {
                 val lien = src.takeIf { it.startsWith("https://") } ?: synchronized(vus) { vus.lastOrNull() } ?: return@post
+                if (attenteLien) {
+                    attenteLien = false
+                    aTelecharger = lien
+                    return@post
+                }
                 if (lien !in ignorees) video = lien
             }
         }
@@ -218,9 +243,35 @@ fun TikTokEcran(marges: PaddingValues) {
     var erreur by remember { mutableStateOf<String?>(null) }
     var ajoute by remember { mutableStateOf<Media?>(null) }
 
+    var lienCopie by remember { mutableStateOf<String?>(null) }
+    val pressePapiers = remember { contexte.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager }
+    fun lirePressePapiers(): String? = runCatching {
+        pressePapiers.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(contexte)?.toString()
+    }.getOrNull()
+    // Lien TikTok copié (dans l'app TikTok : Partager → Copier le lien) : on propose de l'ouvrir.
+    val cycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(cycle) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                val lien = NavigateurTikTok.lienTikTok(lirePressePapiers())
+                if (lien != null && lien != Reglages.texte("tiktok.lienVu")) lienCopie = lien
+            }
+        }
+        cycle.addObserver(obs)
+        onDispose { cycle.removeObserver(obs) }
+    }
+
     BackHandler(enabled = NavigateurTikTok.peutReculer) { NavigateurTikTok.reculer() }
     LaunchedEffect(NavigateurTikTok.video) {
         if (NavigateurTikTok.video != null && !Telechargeur.enCours) { ajoute = null; erreur = null }
+    }
+
+    fun ouvrir(lien: String) {
+        Reglages.ecrireTexte("tiktok.lienVu", lien)
+        lienCopie = null
+        erreur = null
+        ajoute = null
+        NavigateurTikTok.ouvrirLien(lien)
     }
 
     fun telecharger(lien: String?) {
@@ -247,6 +298,12 @@ fun TikTokEcran(marges: PaddingValues) {
         }
     }
 
+    LaunchedEffect(NavigateurTikTok.aTelecharger) {
+        val lien = NavigateurTikTok.aTelecharger ?: return@LaunchedEffect
+        NavigateurTikTok.aTelecharger = null
+        telecharger(lien)
+    }
+
     Column(Modifier.fillMaxSize().background(Color.Black).padding(bottom = marges.calculateBottomPadding())) {
         Row(
             Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).statusBarsPadding().padding(horizontal = 4.dp),
@@ -256,6 +313,10 @@ fun TikTokEcran(marges: PaddingValues) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.page_precedente))
             }
             Text("TikTok", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+            IconButton(onClick = {
+                val lien = NavigateurTikTok.lienTikTok(lirePressePapiers())
+                if (lien != null) ouvrir(lien) else erreur = contexte.getString(R.string.pas_un_lien_tiktok)
+            }) { Icon(Icons.Filled.ContentPaste, stringResource(R.string.coller_lien_tiktok)) }
             IconButton(onClick = { telecharger(null) }, enabled = !Telechargeur.enCours) {
                 Icon(Icons.Filled.Download, stringResource(R.string.telecharger_video_affichee), tint = Elara.accent)
             }
@@ -275,7 +336,8 @@ fun TikTokEcran(marges: PaddingValues) {
                 modifier = Modifier.fillMaxSize(),
             )
             val video = NavigateurTikTok.video
-            val visible = Telechargeur.enCours || erreur != null || ajoute != null || video != null
+            val copie = lienCopie
+            val visible = Telechargeur.enCours || erreur != null || ajoute != null || video != null || copie != null
             Glissant(visible, Modifier.align(Alignment.BottomCenter).widthIn(max = 640.dp).padding(12.dp)) {
                 Row(
                     Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
@@ -311,6 +373,23 @@ fun TikTokEcran(marges: PaddingValues) {
                                 Text(a.nom, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             IconButton(onClick = { ajoute = null }) { Icon(Icons.Filled.Close, stringResource(R.string.fermer)) }
+                        }
+                        copie != null -> {
+                            Icon(Icons.Filled.Link, null, tint = Elara.accent, modifier = Modifier.size(28.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(stringResource(R.string.lien_copie), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text(stringResource(R.string.ouvrir_pour_telecharger), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Button(
+                                onClick = { ouvrir(copie) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Elara.accent),
+                                contentPadding = PaddingValues(horizontal = 14.dp),
+                            ) { Text(stringResource(R.string.telecharger)) }
+                            IconButton(onClick = {
+                                Reglages.ecrireTexte("tiktok.lienVu", copie)
+                                lienCopie = null
+                            }) { Icon(Icons.Filled.Close, stringResource(R.string.fermer)) }
                         }
                         video != null -> {
                             Icon(Icons.Filled.PlayCircle, null, tint = Elara.accent, modifier = Modifier.size(28.dp))
