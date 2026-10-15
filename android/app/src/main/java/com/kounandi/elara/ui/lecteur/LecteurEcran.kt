@@ -299,6 +299,18 @@ private fun LecteurVideo(activite: MainActivity) {
             }
         }
 
+        Lecteur.erreur?.let { message ->
+            Text(
+                message, color = Color.White, fontSize = 14.sp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(top = 160.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Elara.corail.copy(alpha = 0.85f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        }
+
         defilement?.let { cible ->
             val ecart = cible - departDefilement
             Column(

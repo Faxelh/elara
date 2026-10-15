@@ -45,6 +45,9 @@ object Lecteur {
     private var tacheMinuterie: kotlinx.coroutines.Job? = null
     /** Change quand les pistes disponibles changent (audio, sous-titres). */
     var versionPistes by mutableStateOf(0); private set
+    /** Dernière erreur de lecture (affichée dans le lecteur), null si tout va bien. */
+    var erreur by mutableStateOf<String?>(null); private set
+    private var essais = 0
 
     val mediaActuel: Media? get() = file.getOrNull(index)
     val estVideo: Boolean get() = mediaActuel?.type == TypeMedia.VIDEO
@@ -52,7 +55,11 @@ object Lecteur {
     private val scope = MainScope()
 
     fun init(ctx: Context) {
-        player = ExoPlayer.Builder(ctx)
+        // Si le décodeur matériel du téléphone refuse la vidéo, on essaie automatiquement un autre décodeur.
+        val rendus = androidx.media3.exoplayer.DefaultRenderersFactory(ctx)
+            .setEnableDecoderFallback(true)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        player = ExoPlayer.Builder(ctx, rendus)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -71,8 +78,22 @@ object Lecteur {
                 termine = playbackState == Player.STATE_ENDED
                 if (playbackState == Player.STATE_ENDED) finDeLecture()
                 if (playbackState == Player.STATE_READY) {
+                    erreur = null
                     val d = player.duration
                     if (d > 0) duree = d
+                }
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                // Une nouvelle tentative (souvent suffisante après un accroc du décodeur), puis on affiche la cause.
+                if (essais < 1) {
+                    essais++
+                    val pos = player.currentPosition
+                    player.prepare()
+                    player.seekTo(pos.coerceAtLeast(0))
+                    player.play()
+                } else {
+                    erreur = "Lecture impossible (" + error.errorCodeName + ")"
                 }
             }
 
@@ -110,6 +131,13 @@ object Lecteur {
     private fun charger() {
         val enFile = mediaActuel ?: return
         val media = Bibliotheque.media(enFile.id) ?: enFile
+        erreur = null
+        essais = 0
+        val fichier = Bibliotheque.fichier(media)
+        if (!fichier.exists() || fichier.length() == 0L) {
+            erreur = "Fichier introuvable : " + fichier.name
+            return
+        }
         player.setMediaItem(MediaItem.fromUri(Uri.fromFile(Bibliotheque.fichier(media))))
         player.prepare()
         duree = media.duree
@@ -124,6 +152,8 @@ object Lecteur {
 
     fun basculerLecture() {
         if (player.isPlaying) player.pause() else {
+            // Lecteur bloqué après une erreur : on recharge la vidéo.
+            if (player.playbackState == Player.STATE_IDLE) { essais = 0; player.prepare() }
             if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
             player.play()
         }
