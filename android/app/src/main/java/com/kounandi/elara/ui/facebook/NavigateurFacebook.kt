@@ -72,6 +72,13 @@ object NavigateurFacebook {
         enveloppe = env
         val w = WebView(env)
         AntiApp.installer(w)
+        // Quand la zone d'affichage change de taille (barres masquées, plein écran, rotation),
+        // on prévient Facebook : sinon les Reels gardent l'ancienne hauteur et laissent du noir.
+        w.addOnLayoutChangeListener { v, g, h, d, b, ag, ah, ad, ab ->
+            if (d - g != ad - ag || b - h != ab - ah) {
+                (v as WebView).evaluateJavascript("window.dispatchEvent(new Event('resize'))", null)
+            }
+        }
         w.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true

@@ -149,7 +149,11 @@ object AntiApp {
       if (dialogue && texte(dialogue).length < 300 && !dialogue.querySelector('video')) { cacher(dialogue); debloquerDefilement(); continue; }
       // Sinon on ne cache que le bouton lui-même : la page (vidéos, menu, recherche) reste intacte.
       // Jamais un élément qui contient une vidéo ou qui couvre une grande partie de l'écran.
-      if (el.querySelector('video, img, canvas')) continue;
+      if (el.querySelector('video, canvas')) continue;
+      // Une petite icône (logo « f », flèche…) dans le bouton ne compte pas ; une vraie image, si.
+      var grandeImage = false;
+      el.querySelectorAll('img').forEach(function (im) { var b = im.getBoundingClientRect(); if (b.width > 64 || b.height > 64) grandeImage = true; });
+      if (grandeImage) continue;
       var r = el.getBoundingClientRect();
       if (r.width * r.height > innerWidth * innerHeight * 0.15) continue;
       cacher(el);
