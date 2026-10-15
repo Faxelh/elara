@@ -258,8 +258,10 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
   window.__elaraReels = true;
   var minuteur = null, bulle = null;
   function surReel() { return /\/reels?\b/.test(location.pathname); }
+  var decompte = null;
   function annuler() {
     if (minuteur) { clearTimeout(minuteur); minuteur = null; }
+    if (decompte) { clearInterval(decompte); decompte = null; }
     if (bulle) { bulle.remove(); bulle = null; }
   }
   function defilant(el) {
@@ -292,6 +294,12 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
       'background:rgba(0,0,0,.72);color:#fff;font:600 14px -apple-system,Roboto,sans-serif;padding:8px 14px;' +
       'border-radius:18px;pointer-events:none';
     (document.body || document.documentElement).appendChild(bulle);
+    // Compte à rebours visible : 2… 1… puis vidéo suivante.
+    var reste = 2;
+    decompte = setInterval(function () {
+      reste--;
+      if (reste > 0 && bulle) bulle.textContent = 'Suivante dans ' + reste + ' s';
+    }, 1000);
     minuteur = setTimeout(function () { minuteur = null; suivante(v); }, 2000);
   }
   document.addEventListener('ended', function (e) {
