@@ -21,6 +21,8 @@ object Reglages {
     var imageDansImage by mutableStateOf(true); private set
     var biometrie by mutableStateOf(true); private set
     var ongletActuel by mutableStateOf(0); private set
+    /** Nom de l'application choisi par l'utilisateur (vide = nom sous l'icône). */
+    var nomApp by mutableStateOf(""); private set
 
     fun init(ctx: Context) {
         prefs = ctx.getSharedPreferences("reglages", Context.MODE_PRIVATE)
@@ -33,6 +35,7 @@ object Reglages {
         imageDansImage = prefs.getBoolean("pip", true)
         biometrie = prefs.getBoolean("biometrie", true)
         ongletActuel = prefs.getInt("onglet", 0)
+        nomApp = prefs.getString("nomApp", "") ?: ""
     }
 
     fun changerTheme(v: Theme) { theme = v; prefs.edit().putString("theme", v.name).apply() }
@@ -43,6 +46,7 @@ object Reglages {
     fun changerImageDansImage(v: Boolean) { imageDansImage = v; prefs.edit().putBoolean("pip", v).apply() }
     fun changerBiometrie(v: Boolean) { biometrie = v; prefs.edit().putBoolean("biometrie", v).apply() }
     fun changerOnglet(v: Int) { ongletActuel = v; prefs.edit().putInt("onglet", v).apply() }
+    fun changerNomApp(v: String) { nomApp = v.trim().take(30); prefs.edit().putString("nomApp", nomApp).apply() }
 
     fun texte(cle: String): String? = prefs.getString(cle, null)
     fun ecrireTexte(cle: String, valeur: String?) {

@@ -13,6 +13,7 @@ settings:
     SWIFT_VERSION: "5.0"
     TARGETED_DEVICE_FAMILY: "1"
     DEVELOPMENT_LANGUAGE: fr
+    ELARA_NOM: Elara
 
 targets:
   Elara:
@@ -28,7 +29,7 @@ targets:
     info:
       path: Elara/Info.plist
       properties:
-        CFBundleDisplayName: Elara
+        CFBundleDisplayName: $(ELARA_NOM)
         CFBundleDevelopmentRegion: fr
         CFBundleLocalizations: [fr, en, ru, es]
         CFBundleShortVersionString: $(MARKETING_VERSION)

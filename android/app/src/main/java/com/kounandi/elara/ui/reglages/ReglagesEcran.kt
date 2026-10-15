@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
@@ -156,8 +157,12 @@ fun ReglagesEcran(marges: PaddingValues, activite: MainActivity) {
             }
         }
         item {
+            var editerNom by remember { mutableStateOf(false) }
+            if (editerNom) DialogueNomApp(stringResource(R.string.nom_application)) { editerNom = false }
             Section(stringResource(R.string.a_propos)) {
-                Ligne(Icons.Filled.Info, Color.Gray, "Elara", BuildConfig.VERSION_NAME, fleche = false) {}
+                Ligne(Icons.Filled.Info, Color.Gray, nomAffiche(), BuildConfig.VERSION_NAME, fleche = false) {}
+                Separateur()
+                Ligne(Icons.Filled.Edit, Elara.accent, stringResource(R.string.nom_application), nomAffiche()) { editerNom = true }
                 Separateur()
                 Ligne(Icons.Filled.Person, Elara.accent, stringResource(R.string.auteur), "Faxel Kwadio", fleche = false) {}
                 Separateur()

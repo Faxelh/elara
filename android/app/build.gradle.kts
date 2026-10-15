@@ -16,6 +16,8 @@ android {
         val numero = (System.getenv("ELARA_BUILD") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionCode = numero
         versionName = System.getenv("ELARA_VERSION") ?: "2026.2.0"
+        // Nom sous l'icône : fichier NOM du dépôt (passé par la compilation GitHub).
+        manifestPlaceholders["nomApp"] = System.getenv("ELARA_NOM")?.takeIf { it.isNotBlank() } ?: "Elara"
         resourceConfigurations += listOf("fr", "en", "ru", "es")
     }
 

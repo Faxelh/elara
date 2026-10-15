@@ -207,7 +207,7 @@ private fun EcranBibliotheque(marges: PaddingValues, ouvrirDossier: (String) -> 
                 }
             }
             Text(
-                "Elara", fontSize = 40.sp, fontWeight = FontWeight.Black,
+                com.kounandi.elara.ui.reglages.nomAffiche(), fontSize = 40.sp, fontWeight = FontWeight.Black,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
             )
         }

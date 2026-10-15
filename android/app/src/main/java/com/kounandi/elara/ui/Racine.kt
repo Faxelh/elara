@@ -100,6 +100,7 @@ fun Racine(activite: MainActivity) {
         }
 
         com.kounandi.elara.ui.reglages.VerificationMiseAJour()
+        com.kounandi.elara.ui.reglages.ProposerNomApresMiseAJour()
 
         if (Lecteur.ouvert) LecteurEcran(activite)
 

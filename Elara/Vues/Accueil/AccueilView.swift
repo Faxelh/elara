@@ -18,6 +18,7 @@ struct AccueilView: View {
     @State private var lienCopie = false
     @AppStorage("presse-papiers-vu") private var pressePapiersVu = 0
     @AppStorage("accueil.filtre") private var filtre: Filtre = .tout
+    @AppStorage(NomApp.cle) private var nomApp = ""
 
     enum Filtre: String, CaseIterable, Identifiable {
         case tout = "Tout", videos = "Vidéos", audio = "Audio"
@@ -111,7 +112,7 @@ struct AccueilView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Elara")
+            .navigationTitle(nomApp.isEmpty ? NomApp.nomIcone : nomApp)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {

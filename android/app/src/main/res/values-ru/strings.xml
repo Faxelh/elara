@@ -49,6 +49,7 @@
     <string name="doublons_supprimes">Удалено дубликатов: %d.</string>
     <string name="effacer">Стереть</string>
     <string name="empreinte_visage">Отпечаток / лицо</string>
+    <string name="enregistrer">Сохранить</string>
     <string name="enregistrer_galerie">Сохранить</string>
     <string name="enregistrer_image_question">Сохранить в галерею?</string>
     <string name="enregistres_galerie">Сохранено в галерею (папка Elara): %d.</string>
@@ -91,6 +92,7 @@
     <string name="maj_autoriser">Разрешите Elara устанавливать приложения и снова нажмите «Обновить».</string>
     <string name="maj_disponible">Доступно обновление</string>
     <string name="maj_erreur">Не удалось проверить или скачать обновление. Проверьте подключение.</string>
+    <string name="maj_installee">Обновление установлено — название приложения?</string>
     <string name="maj_texte">Доступна Elara %1$s (у вас %2$s).</string>
     <string name="masquer_filigrane">Скрыть водяной знак</string>
     <string name="masquer_sur_n">Скрыть на %d видео</string>
@@ -104,6 +106,9 @@
     <string name="n_medias">Файлов: %d</string>
     <string name="n_selectionnes">Выбрано: %d</string>
     <string name="ne_plus_repeter">Не повторять</string>
+    <string name="nom_application">Название приложения</string>
+    <string name="nom_application_aide">Название сразу меняется в приложении. Для значка на экране (сейчас «%1$s») впишите то же имя в файл NOM на GitHub — оно применится со следующим обновлением.</string>
+    <string name="nom_icone_github">Изменить имя под значком (GitHub)</string>
     <string name="nouveau_dossier">Новая папка</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Главная</string>

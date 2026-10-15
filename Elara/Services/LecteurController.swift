@@ -256,7 +256,7 @@ final class LecteurController {
         let ecoule = player.currentTime().seconds
         MPNowPlayingInfoCenter.default().nowPlayingInfo = [
             MPMediaItemPropertyTitle: media.nom,
-            MPMediaItemPropertyArtist: "Elara",
+            MPMediaItemPropertyArtist: (UserDefaults.standard.string(forKey: NomApp.cle)).flatMap { $0.isEmpty ? nil : $0 } ?? NomApp.nomIcone,
             MPMediaItemPropertyPlaybackDuration: media.duree,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: ecoule.isFinite ? ecoule : 0,
             MPNowPlayingInfoPropertyPlaybackRate: player.rate

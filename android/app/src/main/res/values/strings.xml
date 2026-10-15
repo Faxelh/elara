@@ -49,6 +49,7 @@
     <string name="doublons_supprimes">%d doublon(s) supprimé(s).</string>
     <string name="effacer">Effacer</string>
     <string name="empreinte_visage">Empreinte / visage</string>
+    <string name="enregistrer">Enregistrer</string>
     <string name="enregistrer_galerie">Enregistrer</string>
     <string name="enregistrer_image_question">L\'enregistrer dans la galerie ?</string>
     <string name="enregistres_galerie">%d enregistré(s) dans la galerie (dossier Elara).</string>
@@ -91,6 +92,7 @@
     <string name="maj_autoriser">Autorisez Elara à installer des applis, puis touchez à nouveau « Mettre à jour ».</string>
     <string name="maj_disponible">Nouvelle version disponible</string>
     <string name="maj_erreur">Impossible de vérifier ou de télécharger la mise à jour. Vérifiez la connexion.</string>
+    <string name="maj_installee">Mise à jour installée — nom de l\'application ?</string>
     <string name="maj_texte">Elara %1$s est disponible (vous avez la %2$s).</string>
     <string name="masquer_filigrane">Masquer le filigrane</string>
     <string name="masquer_sur_n">Masquer sur %d vidéos</string>
@@ -104,6 +106,9 @@
     <string name="n_medias">%d média(s)</string>
     <string name="n_selectionnes">%d sélectionné(s)</string>
     <string name="ne_plus_repeter">Ne plus répéter</string>
+    <string name="nom_application">Nom de l\'application</string>
+    <string name="nom_application_aide">Le nom change tout de suite dans l\'app. Pour l\'icône de l\'écran d\'accueil (actuellement « %1$s »), écrivez le même nom dans le fichier NOM sur GitHub : il s\'appliquera à la prochaine mise à jour.</string>
+    <string name="nom_icone_github">Changer le nom sous l\'icône (GitHub)</string>
     <string name="nouveau_dossier">Nouveau dossier</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Accueil</string>

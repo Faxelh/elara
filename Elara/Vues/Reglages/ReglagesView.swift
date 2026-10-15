@@ -339,6 +339,7 @@ struct AideView: View {
 // MARK: - À propos
 
 struct AProposView: View {
+    @AppStorage(NomApp.cle) private var nomApp = ""
     private var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
@@ -353,12 +354,19 @@ struct AProposView: View {
                         .font(.system(size: 46))
                         .foregroundStyle(.white)
                 }
-            Text("Elara").font(.largeTitle.bold())
+            Text(nomApp.isEmpty ? NomApp.nomIcone : nomApp).font(.largeTitle.bold())
             Text("Version \(version)").foregroundStyle(.secondary)
             Text("Par Faxel Kwadio").font(.subheadline.weight(.medium))
             Text("Votre lecteur vidéo et audio.")
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Nom de l'application").font(.subheadline.weight(.semibold))
+                ChampNomApp()
+            }
+            .padding()
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal)
             Spacer()
         }
         .padding(.top, 48)

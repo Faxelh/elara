@@ -49,6 +49,7 @@
     <string name="doublons_supprimes">%d duplicado(s) eliminado(s).</string>
     <string name="effacer">Borrar</string>
     <string name="empreinte_visage">Huella / rostro</string>
+    <string name="enregistrer">Guardar</string>
     <string name="enregistrer_galerie">Guardar</string>
     <string name="enregistrer_image_question">¿Guardarla en la galería?</string>
     <string name="enregistres_galerie">%d guardado(s) en la galería (carpeta Elara).</string>
@@ -91,6 +92,7 @@
     <string name="maj_autoriser">Permite que Elara instale apps y vuelve a tocar «Actualizar».</string>
     <string name="maj_disponible">Nueva versión disponible</string>
     <string name="maj_erreur">No se pudo comprobar o descargar la actualización. Revisa la conexión.</string>
+    <string name="maj_installee">Actualización instalada — ¿nombre de la app?</string>
     <string name="maj_texte">Elara %1$s está disponible (tienes la %2$s).</string>
     <string name="masquer_filigrane">Ocultar marca de agua</string>
     <string name="masquer_sur_n">Ocultar en %d vídeos</string>
@@ -104,6 +106,9 @@
     <string name="n_medias">%d archivo(s)</string>
     <string name="n_selectionnes">%d seleccionado(s)</string>
     <string name="ne_plus_repeter">Dejar de repetir</string>
+    <string name="nom_application">Nombre de la aplicación</string>
+    <string name="nom_application_aide">El nombre cambia al instante en la app. Para el icono (ahora «%1$s»), escribe el mismo nombre en el archivo NOM en GitHub: se aplicará en la próxima actualización.</string>
+    <string name="nom_icone_github">Cambiar el nombre del icono (GitHub)</string>
     <string name="nouveau_dossier">Nueva carpeta</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Inicio</string>

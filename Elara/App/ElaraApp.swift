@@ -91,6 +91,7 @@ struct RacineView: View {
         }
         #if PERSO
         .modifier(ModifMiseAJour())
+            .modifier(ModifNomApresMiseAJour())
         #endif
         .id(langueChoisie)
         .environment(\.locale, Langue.locale)

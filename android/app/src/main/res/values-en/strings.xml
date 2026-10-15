@@ -49,6 +49,7 @@
     <string name="doublons_supprimes">%d duplicate(s) removed.</string>
     <string name="effacer">Erase</string>
     <string name="empreinte_visage">Fingerprint / face</string>
+    <string name="enregistrer">Save</string>
     <string name="enregistrer_galerie">Save</string>
     <string name="enregistrer_image_question">Save it to the gallery?</string>
     <string name="enregistres_galerie">%d saved to the gallery (Elara folder).</string>
@@ -91,6 +92,7 @@
     <string name="maj_autoriser">Allow Elara to install apps, then tap “Update” again.</string>
     <string name="maj_disponible">Update available</string>
     <string name="maj_erreur">Couldn\'t check or download the update. Check your connection.</string>
+    <string name="maj_installee">Update installed — app name?</string>
     <string name="maj_texte">Elara %1$s is available (you have %2$s).</string>
     <string name="masquer_filigrane">Hide watermark</string>
     <string name="masquer_sur_n">Hide on %d videos</string>
@@ -104,6 +106,9 @@
     <string name="n_medias">%d item(s)</string>
     <string name="n_selectionnes">%d selected</string>
     <string name="ne_plus_repeter">Stop repeating</string>
+    <string name="nom_application">App name</string>
+    <string name="nom_application_aide">The name changes right away in the app. For the home-screen icon (currently “%1$s”), write the same name in the NOM file on GitHub: it applies with the next update.</string>
+    <string name="nom_icone_github">Change the icon name (GitHub)</string>
     <string name="nouveau_dossier">New folder</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Home</string>
