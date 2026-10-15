@@ -51,10 +51,11 @@ jobs:
           gradle-version: "8.10.2"
 
       - name: Compiler l'APK
-        run: gradle :app:assembleDebug --stacktrace
+        # Version « release » : bien plus fluide que « debug » (même signature, mise à jour par-dessus).
+        run: gradle :app:assembleRelease --stacktrace
 
       - name: Renommer l'APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Elara.apk
+        run: cp app/build/outputs/apk/release/app-release.apk Elara.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -80,3 +81,4 @@ jobs:
           gh release list --repo "${{ github.repository }}" --limit 100 --json tagName -q '.[].tagName' \
             | grep '^android-' | sort -t- -k2 -n -r | tail -n +6 \
             | xargs -r -I{} gh release delete {} --repo "${{ github.repository }}" --yes --cleanup-tag
+
