@@ -5,6 +5,9 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,7 +40,7 @@ fun nomAffiche(): String = Reglages.nomApp.ifBlank { nomIcone() }
 
 /** Fenêtre « Nom de l'application » (Réglages, et proposée après chaque mise à jour). */
 @Composable
-fun DialogueNomApp(titre: String, fermer: () -> Unit) {
+fun DialogueNomApp(titre: String, avecNouveautes: Boolean = false, fermer: () -> Unit) {
     val contexte = LocalContext.current
     val icone = nomIcone()
     var brouillon by remember { mutableStateOf(Reglages.nomApp.ifBlank { icone }) }
@@ -45,7 +48,16 @@ fun DialogueNomApp(titre: String, fermer: () -> Unit) {
         onDismissRequest = fermer,
         title = { Text(titre) },
         text = {
-            Column {
+            Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+                if (avecNouveautes) {
+                    val derniere = remember { Nouveautes.lire(contexte).firstOrNull() }
+                    if (derniere != null) {
+                        Text(stringResource(R.string.nouveautes) + " — " + derniere.titre, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Elara.accent)
+                        Spacer(Modifier.height(6.dp))
+                        ListeChangements(derniere)
+                        Spacer(Modifier.height(14.dp))
+                    }
+                }
                 OutlinedTextField(brouillon, { brouillon = it.take(30) }, singleLine = true, label = { Text(stringResource(R.string.nom_application)) })
                 Spacer(Modifier.height(10.dp))
                 Text(stringResource(R.string.nom_application_aide, icone), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -77,7 +89,7 @@ fun ProposerNomApresMiseAJour() {
         else if (vue != actuelle) afficher = true
     }
     if (afficher) {
-        DialogueNomApp(stringResource(R.string.maj_installee)) {
+        DialogueNomApp(stringResource(R.string.maj_installee), avecNouveautes = true) {
             Reglages.ecrireTexte("nomApp.versionVue", BuildConfig.VERSION_CODE.toString())
             afficher = false
         }

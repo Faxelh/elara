@@ -1,0 +1,21 @@
+# 15 octobre 2026
+- Nom de l'application modifiable (Réglages › À propos) et proposé après chaque mise à jour.
+- Numéro de version automatique : Année.Mois.N.
+- Écran toujours allumé pendant la lecture d'une vidéo ou d'un Reel.
+- En quittant l'app pendant une vidéo, elle continue en image dans l'image au lieu de s'arrêter.
+- Reels Facebook : passage automatique au Reel suivant avec compte à rebours « 2… 1… ».
+- Filigranes : retrait sur une ou plusieurs vidéos, en « Effacer » (sans flou) ou « Recadrer ».
+- Réseaux : TikTok remplacé par X (Twitter), avec téléchargement des vidéos.
+- Facebook : le son téléchargé correspond toujours à la bonne vidéo.
+- Fenêtres et boutons « Ouvrir l'application » fermés ou masqués automatiquement.
+- Plus fluide : miniatures en mémoire, pages Facebook/X/YouTube plus légères ; Android en version optimisée.
+- Compression : la vidéo choisie est bien celle touchée.
+
+# 11 octobre 2026
+- Mises à jour depuis l'application (Réglages › Mises à jour), sur iPhone et Android.
+- Onglet Réseaux : Facebook et YouTube au même endroit.
+- Téléchargement des images Facebook ; bandeau de téléchargement qui se range sur le côté.
+- Lecteur professionnel : vitesse, pistes audio et sous-titres, minuterie, verrouillage, cadrage, revoir à la fin.
+- Sélection multiple, « Tout sélectionner », enregistrement dans Photos / la galerie.
+- Doublons détectés : « Déjà dans Elara ».
+- Dossier privé protégé (Face ID, empreinte, code, schéma sur Android).

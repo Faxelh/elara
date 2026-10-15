@@ -110,6 +110,7 @@
     <string name="nom_application_aide">Le nom change tout de suite dans l\'app. Pour l\'icône de l\'écran d\'accueil (actuellement « %1$s »), écrivez le même nom dans le fichier NOM sur GitHub : il s\'appliquera à la prochaine mise à jour.</string>
     <string name="nom_icone_github">Changer le nom sous l\'icône (GitHub)</string>
     <string name="nouveau_dossier">Nouveau dossier</string>
+    <string name="nouveautes">Nouveautés et correctifs</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Accueil</string>
     <string name="onglet_reglages">Réglages</string>

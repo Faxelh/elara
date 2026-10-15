@@ -345,6 +345,7 @@ struct AProposView: View {
     }
 
     var body: some View {
+        ScrollView {
         VStack(spacing: 16) {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(Theme.degrade)
@@ -360,6 +361,17 @@ struct AProposView: View {
             Text("Votre lecteur vidéo et audio.")
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
+            NavigationLink {
+                NouveautesView()
+            } label: {
+                Label("Nouveautés et correctifs", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Nom de l'application").font(.subheadline.weight(.semibold))
                 ChampNomApp()
@@ -370,6 +382,8 @@ struct AProposView: View {
             Spacer()
         }
         .padding(.top, 48)
+        .padding(.bottom, 24)
+        }
         .navigationTitle("À propos")
         .navigationBarTitleDisplayMode(.inline)
     }

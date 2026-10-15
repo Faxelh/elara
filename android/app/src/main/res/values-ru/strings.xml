@@ -110,6 +110,7 @@
     <string name="nom_application_aide">Название сразу меняется в приложении. Для значка на экране (сейчас «%1$s») впишите то же имя в файл NOM на GitHub — оно применится со следующим обновлением.</string>
     <string name="nom_icone_github">Изменить имя под значком (GitHub)</string>
     <string name="nouveau_dossier">Новая папка</string>
+    <string name="nouveautes">Что нового</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Главная</string>
     <string name="onglet_reglages">Настройки</string>

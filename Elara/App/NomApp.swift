@@ -85,6 +85,11 @@ struct ModifNomApresMiseAJour: ViewModifier {
                                 .foregroundStyle(.green)
                                 .font(.headline)
                         }
+                        if let derniere = Nouveautes.derniere {
+                            Section("Nouveautés — \(derniere.titre)") {
+                                ListeChangements(section: derniere).padding(.vertical, 4)
+                            }
+                        }
                         Section("Nom de l'application") {
                             ChampNomApp()
                         }

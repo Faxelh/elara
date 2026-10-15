@@ -110,6 +110,7 @@
     <string name="nom_application_aide">The name changes right away in the app. For the home-screen icon (currently “%1$s”), write the same name in the NOM file on GitHub: it applies with the next update.</string>
     <string name="nom_icone_github">Change the icon name (GitHub)</string>
     <string name="nouveau_dossier">New folder</string>
+    <string name="nouveautes">What\'s new</string>
     <string name="ok">OK</string>
     <string name="onglet_accueil">Home</string>
     <string name="onglet_reglages">Settings</string>

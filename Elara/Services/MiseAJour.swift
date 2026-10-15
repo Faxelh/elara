@@ -169,7 +169,7 @@ struct ModifMiseAJour: ViewModifier {
                     UserDefaults.standard.set(v.numero, forKey: "maj.ignoree")
                 }
             } message: { v in
-                Text("Elara \(v.version) est disponible (vous avez la \(maj.texteVersion)).")
+                Text("Elara \(v.version) est disponible (vous avez la \(maj.texteVersion)).\n\n\(String(v.notes.prefix(500)))")
             }
             .sheet(isPresented: $feuille) {
                 NavigationStack {
