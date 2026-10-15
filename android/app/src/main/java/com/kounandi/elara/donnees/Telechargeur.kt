@@ -175,9 +175,9 @@ object Telechargeur {
                     for (lienSon in sons) {
                         val audio = runCatching { telechargerBrut(ctx, lienSon, 0.8f, 0.2f) }.getOrNull() ?: continue
                         val sortie = File(dossierTemp(ctx), UUID.randomUUID().toString() + ".mp4")
-                        val ok = withContext(Dispatchers.IO) {
-                            pistes(audio).second && runCatching { fusionner(fichier, audio, sortie) }.getOrDefault(false)
-                        }
+                        val ok = withContext(Dispatchers.IO) { pistes(audio).second } &&
+                            runCatching { Assemblage.assembler(ctx, fichier, audio, sortie) }.getOrDefault(false) &&
+                            withContext(Dispatchers.IO) { pistesLisibles(sortie).first }
                         audio.delete()
                         if (ok) { fichier.delete(); fichier = sortie; break } else sortie.delete()
                     }
@@ -235,9 +235,8 @@ object Telechargeur {
                 for (audio in essais) {
                     val sortie = File(dossierTemp(ctx), UUID.randomUUID().toString() + ".mp4")
                     temporaires += sortie
-                    val ok = withContext(Dispatchers.IO) {
-                        runCatching { fusionner(source, audio, sortie) }.getOrDefault(false) && pistesLisibles(sortie).first
-                    }
+                    val ok = runCatching { Assemblage.assembler(ctx, source, audio, sortie) }.getOrDefault(false) &&
+                        withContext(Dispatchers.IO) { pistesLisibles(sortie).first }
                     if (ok) { resultat = sortie; break }
                 }
             } else if (so != null) {
