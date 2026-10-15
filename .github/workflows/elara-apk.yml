@@ -29,13 +29,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Version affichée : contenu du fichier VERSION (ex. 2026.2) + nombre de mises à jour
-      # depuis sa dernière modification → 2026.2.0, 2026.2.1, 2026.2.2…
+      # Version affichée : Année.Mois.N → 2026.10.1, 2026.10.2… puis 2026.11.1 le mois suivant.
       - name: Calculer la version
         run: |
-          BASE=$(head -n 1 "$GITHUB_WORKSPACE/VERSION" | tr -d '[:space:]')
-          DEPUIS=$(git -C "$GITHUB_WORKSPACE" log -1 --format=%H -- VERSION)
-          if [ -n "$DEPUIS" ]; then N=$(git -C "$GITHUB_WORKSPACE" rev-list --count "$DEPUIS"..HEAD); else N=0; fi
+          # Version automatique : Année.Mois.N (N = numéro de la mise à jour dans le mois, à partir de 1).
+          ANNEE=$(date -u +%Y)
+          MOIS=$((10#$(date -u +%m)))
+          DEBUT=$(date -u +%Y-%m-01T00:00:00Z)
+          N=$(git -C "$GITHUB_WORKSPACE" rev-list --count --since="$DEBUT" HEAD)
+          [ "$N" -lt 1 ] && N=1
+          BASE="$ANNEE.$MOIS"
           echo "ELARA_VERSION=$BASE.$N" >> "$GITHUB_ENV"
           # Numéro de compilation : minutes écoulées depuis 1970. Il augmente toujours,
           # même si le dépôt est recréé (sinon Elara croit être déjà à jour).
