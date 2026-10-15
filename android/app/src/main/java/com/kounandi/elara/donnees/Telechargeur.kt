@@ -427,7 +427,7 @@ object Telechargeur {
             m.start()
             val taille = maxOf(
                 if (formatV.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) formatV.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else 0,
-                if (formatA?.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE) == true) formatA.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else 0,
+                formatA?.let { if (it.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) it.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else 0 } ?: 0,
                 4 * 1024 * 1024,
             )
             val tampon = ByteBuffer.allocateDirect(taille)
