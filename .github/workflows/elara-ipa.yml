@@ -112,6 +112,9 @@ jobs:
           DEPOT: ${{ github.repository }}
         run: |
           NUMERO=$ELARA_BUILD
+          # Notes de version : la dernière section de Elara/Nouveautes.txt (affichée dans l'app).
+          awk 'BEGIN{n=0} /^# /{n++} n==1' Elara/Nouveautes.txt | sed '1d' > build/notes.txt
+          [ -s build/notes.txt ] || git log -1 --pretty=%s > build/notes.txt
           # Deux compilations lancées la même minute : la seconde n'a rien à publier.
           if gh release view "ios-$NUMERO" --repo "$DEPOT" > /dev/null 2>&1; then
             echo "La version ios-$NUMERO est déjà publiée."
@@ -119,7 +122,7 @@ jobs:
           fi
           gh release create "ios-$NUMERO" build/ipa/Elara.ipa \
             --repo "$DEPOT" --title "Elara iPhone $ELARA_VERSION" \
-            --notes "$(git log -1 --pretty=%s)" --target "${{ github.sha }}"
+            --notes-file build/notes.txt --target "${{ github.sha }}"
           TAILLE=$(stat -f%z build/ipa/Elara.ipa)
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           BASE="https://github.com/$DEPOT/releases/download"

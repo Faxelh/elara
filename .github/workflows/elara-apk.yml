@@ -6,6 +6,7 @@ on:
     paths:
       - "android/**"
       - "NOM"
+      - "Elara/Nouveautes.txt"
       - ".github/workflows/elara-apk.yml"
   workflow_dispatch:
 
@@ -59,6 +60,9 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
+      - name: Nouveautés dans l'app
+        run: cp ../Elara/Nouveautes.txt app/src/main/assets/nouveautes.txt
+
       - name: Compiler l'APK
         # Version « release » : bien plus fluide que « debug » (même signature, mise à jour par-dessus).
         run: gradle :app:assembleRelease --stacktrace
@@ -77,6 +81,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          awk 'BEGIN{n=0} /^# /{n++} n==1' ../Elara/Nouveautes.txt | sed '1d' > notes.txt
+          [ -s notes.txt ] || git log -1 --pretty=%s > notes.txt
           if gh release view "android-$ELARA_BUILD" --repo "${{ github.repository }}" > /dev/null 2>&1; then
             echo "La version android-$ELARA_BUILD est déjà publiée."
             exit 0
@@ -84,7 +90,7 @@ jobs:
           gh release create "android-$ELARA_BUILD" Elara.apk \
             --repo "${{ github.repository }}" \
             --title "Elara Android $ELARA_VERSION" \
-            --notes "$(git log -1 --pretty=%s)" \
+            --notes-file notes.txt \
             --target "${{ github.sha }}"
           # On garde seulement les 5 dernières versions Android.
           gh release list --repo "${{ github.repository }}" --limit 100 --json tagName -q '.[].tagName' \
