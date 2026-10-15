@@ -71,6 +71,7 @@ object NavigateurFacebook {
         val env = MutableContextWrapper(ctx)
         enveloppe = env
         val w = WebView(env)
+        AntiApp.installer(w)
         w.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true

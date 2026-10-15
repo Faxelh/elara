@@ -22,7 +22,7 @@ final class NavigateurYouTube: NSObject, WKNavigationDelegate {
         configuration.allowsInlineMediaPlayback = true
         configuration.allowsPictureInPictureMediaPlayback = true
         let controleur = WKUserContentController()
-        controleur.addUserScript(AntiApp.userScript)
+        AntiApp.installer(controleur)
         configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)
         vue.allowsBackForwardNavigationGestures = true

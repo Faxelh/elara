@@ -143,14 +143,25 @@ struct RacineView: View {
         }
         .preferredColorScheme(schema)
         .task { if appVerrouillee { await deverrouillerApp() } }
+        // Écran allumé pendant la lecture d'une vidéo (pas pour la musique).
+        .onChange(of: lecteur.enLecture) { _, lecture in
+            UIApplication.shared.isIdleTimerDisabled = lecture && lecteur.mediaActuel?.type == .video
+        }
         .onChange(of: scenePhase) { _, phase in
+            // On quitte l'app pendant une vidéo : elle continue en image dans l'image au lieu de s'arrêter.
+            if phase == .inactive, lecteur.estAffiche, lecteur.enLecture, !lecteur.enPip,
+               lecteur.mediaActuel?.type == .video, lecteur.mediaActuel?.estPrive != true,
+               Cle.booleen(Cle.imageDansImage, defaut: true),
+               lecteur.pip?.isPictureInPicturePossible == true {
+                lecteur.pip?.startPictureInPicture()
+            }
             if phase != .active { lecteur.sauverPosition() }
             if phase == .background {
                 coffre.verrouiller()
                 verrouOuverture.verrouiller()
                 if lecteur.mediaActuel?.estPrive == true {
                     lecteur.fermer()
-                } else if Cle.booleen(Cle.pauseArrierePlan, defaut: false) {
+                } else if Cle.booleen(Cle.pauseArrierePlan, defaut: false), !lecteur.enPip {
                     lecteur.player.pause()
                 }
             }

@@ -7,6 +7,15 @@ import android.net.Uri
  * la fenêtre est fermée (« Pas maintenant ») ou cachée, et les liens vers l'app ou le Play Store restent sans effet.
  */
 object AntiApp {
+    /** Écran allumé tant qu'une vidéo joue dans la page (Reel, post…) ; s'éteint normalement sinon. */
+    @android.annotation.SuppressLint("JavascriptInterface")
+    fun installer(vue: android.webkit.WebView) {
+        vue.addJavascriptInterface(object {
+            @android.webkit.JavascriptInterface
+            fun etat(lecture: Boolean) { vue.post { vue.keepScreenOn = lecture } }
+        }, "ElaraEveil")
+    }
+
     /** Vrai si la navigation mène hors d'Elara (app, intent://, Play Store, App Store…). */
     fun bloque(uri: Uri): Boolean {
         val schema = uri.scheme?.lowercase() ?: return true
@@ -146,6 +155,21 @@ object AntiApp {
       cacher(el);
     }
   }
+
+  // Écran allumé tant qu'une vidéo (Reel, post…) est en lecture.
+  var eveil = null;
+  function majEveil() {
+    var lecture = false;
+    document.querySelectorAll('video').forEach(function (v) { if (!v.paused && !v.ended) lecture = true; });
+    if (lecture === eveil) return;
+    eveil = lecture;
+    try { window.webkit.messageHandlers.elaraEveil.postMessage(lecture); } catch (e) {}
+    try { ElaraEveil.etat(lecture); } catch (e) {}
+  }
+  ['play', 'playing', 'pause', 'ended', 'emptied'].forEach(function (t) {
+    document.addEventListener(t, function () { setTimeout(majEveil, 50); }, true);
+  });
+  window.addEventListener('pagehide', function () { eveil = null; try { window.webkit.messageHandlers.elaraEveil.postMessage(false); } catch (e) {} try { ElaraEveil.etat(false); } catch (e) {} });
 
   // Les liens vers l'app ou le store ne quittent jamais Elara.
   document.addEventListener('click', function (e) {

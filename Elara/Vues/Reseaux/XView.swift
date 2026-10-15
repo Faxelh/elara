@@ -30,7 +30,7 @@ final class NavigateurX: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
         configuration.mediaTypesRequiringUserActionForPlayback = []
         let controleur = WKUserContentController()
         controleur.addUserScript(WKUserScript(source: Self.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        controleur.addUserScript(AntiApp.userScript)
+        AntiApp.installer(controleur)
         configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)
         vue.customUserAgent = ExtracteurFacebook.agentMobile

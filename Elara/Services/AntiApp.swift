@@ -1,11 +1,20 @@
 import Foundation
 import WebKit
+import UIKit
 
 /// Bloque les invitations « Ouvrir l'application » de Facebook, TikTok et YouTube :
 /// la fenêtre est fermée (« Pas maintenant ») ou cachée, et les liens vers l'app ou l'App Store restent sans effet.
 enum AntiApp {
     static var userScript: WKUserScript {
         WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    }
+
+    /// Installe le script dans une page : blocage « Ouvrir l'application » + écran allumé pendant les vidéos.
+    @MainActor
+    static func installer(_ controleur: WKUserContentController) {
+        controleur.addUserScript(userScript)
+        controleur.removeScriptMessageHandler(forName: "elaraEveil")
+        controleur.add(GardeEveil.partage, name: "elaraEveil")
     }
 
     /// Vrai si la navigation mène hors d'Elara (app TikTok/Facebook/YouTube, App Store, Play Store…).
@@ -149,6 +158,21 @@ enum AntiApp {
     }
   }
 
+  // Écran allumé tant qu'une vidéo (Reel, post…) est en lecture.
+  var eveil = null;
+  function majEveil() {
+    var lecture = false;
+    document.querySelectorAll('video').forEach(function (v) { if (!v.paused && !v.ended) lecture = true; });
+    if (lecture === eveil) return;
+    eveil = lecture;
+    try { window.webkit.messageHandlers.elaraEveil.postMessage(lecture); } catch (e) {}
+    try { ElaraEveil.etat(lecture); } catch (e) {}
+  }
+  ['play', 'playing', 'pause', 'ended', 'emptied'].forEach(function (t) {
+    document.addEventListener(t, function () { setTimeout(majEveil, 50); }, true);
+  });
+  window.addEventListener('pagehide', function () { eveil = null; try { window.webkit.messageHandlers.elaraEveil.postMessage(false); } catch (e) {} try { ElaraEveil.etat(false); } catch (e) {} });
+
   // Les liens vers l'app ou le store ne quittent jamais Elara.
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a') : null;
@@ -183,4 +207,14 @@ enum AntiApp {
   planifier();
 })();
 """#
+}
+
+/// Garde l'écran allumé tant qu'une vidéo joue dans Facebook, X ou YouTube.
+@MainActor
+final class GardeEveil: NSObject, WKScriptMessageHandler {
+    static let partage = GardeEveil()
+
+    func userContentController(_ controleur: WKUserContentController, didReceive message: WKScriptMessage) {
+        UIApplication.shared.isIdleTimerDisabled = (message.body as? Bool) ?? false
+    }
 }

@@ -126,6 +126,10 @@ fun LecteurEcran(activite: MainActivity) {
         onDispose { activite.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 
+    // Image dans l'image automatique (Android 12+) dès qu'une vidéo joue.
+    LaunchedEffect(Lecteur.enLecture, Lecteur.largeurVideo, Lecteur.hauteurVideo, Lecteur.estVideo) { activite.majPipAuto() }
+    DisposableEffect(Unit) { onDispose { activite.majPipAuto() } }
+
     if (Lecteur.estVideo) LecteurVideo(activite) else LecteurAudio()
 }
 

@@ -44,7 +44,7 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
         configuration.allowsPictureInPictureMediaPlayback = true
         let controleur = WKUserContentController()
         controleur.addUserScript(WKUserScript(source: Self.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        controleur.addUserScript(AntiApp.userScript)
+        AntiApp.installer(controleur)
         controleur.addUserScript(WKUserScript(source: Self.scriptReels, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)

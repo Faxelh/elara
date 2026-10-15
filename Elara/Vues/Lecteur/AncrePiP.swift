@@ -18,6 +18,8 @@ struct AncrePiP: UIViewRepresentable {
         if AVPictureInPictureController.isPictureInPictureSupported() {
             let pip = AVPictureInPictureController(playerLayer: vue.couche)
             pip?.delegate = context.coordinator
+            // Image dans l'image automatique quand on quitte l'app pendant une vidéo.
+            pip?.canStartPictureInPictureAutomaticallyFromInline = Cle.booleen(Cle.imageDansImage, defaut: true)
             lecteur.pip = pip
         }
         return vue

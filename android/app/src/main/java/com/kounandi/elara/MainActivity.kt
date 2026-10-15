@@ -98,6 +98,22 @@ class MainActivity : AppCompatActivity() {
         runCatching { enterPictureInPictureMode(params) }
     }
 
+    /** Android 12+ : passe tout seul en image dans l'image quand on quitte l'app pendant une vidéo. */
+    fun majPipAuto() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return
+        val l = Lecteur.largeurVideo.coerceAtLeast(1)
+        val h = Lecteur.hauteurVideo.coerceAtLeast(1)
+        val ratio = (l.toFloat() / h).coerceIn(1f / 2.39f, 2.39f)
+        runCatching {
+            setPictureInPictureParams(
+                PictureInPictureParams.Builder()
+                    .setAspectRatio(Rational((ratio * 1000).toInt(), 1000))
+                    .setAutoEnterEnabled(peutPip() && Lecteur.enLecture)
+                    .build()
+            )
+        }
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         if (Lecteur.enLecture) entrerPip()
