@@ -183,6 +183,14 @@ object Telechargeur {
                     }
                 }
             }
+            // Vidéo abîmée ou coupée : on ne l'ajoute pas (elle serait illisible).
+            if (Bibliotheque.type(fichier.extension) == TypeMedia.VIDEO) {
+                val (v, a) = withContext(Dispatchers.IO) { pistesLisibles(fichier) }
+                if (!v && !a) {
+                    fichier.delete()
+                    throw ErreurTelechargement(ctx.getString(R.string.erreur_abime))
+                }
+            }
             val type = Bibliotheque.type(fichier.extension)
             if (type == null) {
                 fichier.delete()
@@ -211,24 +219,34 @@ object Telechargeur {
                 if (annule) throw ErreurTelechargement(ctx.getString(R.string.telechargement_annule))
                 val f = runCatching { telechargerBrut(ctx, lien, rang * part, part) }.getOrNull() ?: continue
                 temporaires += f
-                val (v, a) = withContext(Dispatchers.IO) { pistes(f) }
+                // Un fichier abîmé ou incomplet est ignoré : on passe au suivant.
+                val (v, a) = withContext(Dispatchers.IO) { pistesLisibles(f) }
                 if (v && a) { complet = f; break }
                 if (v && image == null) image = f else if (a && son == null) son = f
                 if (image != null && son != null) break
             }
             val im = image
             val so = son
-            var resultat: File? = complet ?: im ?: so
-            if (complet == null && im != null && so != null) {
-                val sortie = File(dossierTemp(ctx), UUID.randomUUID().toString() + ".mp4")
-                val ok = withContext(Dispatchers.IO) { runCatching { fusionner(im, so, sortie) }.getOrDefault(false) }
-                if (ok) {
+            // On réécrit toujours un MP4 propre (image + son si possible), puis on vérifie qu'il se lit.
+            val source = complet ?: im
+            var resultat: File? = null
+            if (source != null) {
+                val essais = if (complet == null && so != null) listOf(so, null) else listOf(null)
+                for (audio in essais) {
+                    val sortie = File(dossierTemp(ctx), UUID.randomUUID().toString() + ".mp4")
                     temporaires += sortie
-                    resultat = sortie
+                    val ok = withContext(Dispatchers.IO) {
+                        runCatching { fusionner(source, audio, sortie) }.getOrDefault(false) && pistesLisibles(sortie).first
+                    }
+                    if (ok) { resultat = sortie; break }
                 }
+            } else if (so != null) {
+                resultat = so
             }
-            val choisi = resultat ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_introuvable))
-            val mp4 = File(dossierTemp(ctx), UUID.randomUUID().toString() + ".mp4")
+            val choisi = resultat ?: throw ErreurTelechargement(
+                ctx.getString(if (temporaires.isEmpty()) R.string.erreur_introuvable else R.string.erreur_abime)
+            )
+            val mp4 = File(dossierTemp(ctx), UUID.randomUUID().toString() + if (resultat === so && source == null) ".m4a" else ".mp4")
             choisi.renameTo(mp4)
             return Bibliotheque.importerFichier(mp4, nomFacebook(), prive)
                 ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_ajout))
@@ -297,6 +315,8 @@ object Telechargeur {
                     }
                 }
             }
+            // Fichier coupé en route : on ne garde pas un fichier incomplet (il serait illisible).
+            if (total > 0 && dest.length() < total) throw ErreurTelechargement(ctx.getString(R.string.erreur_incomplet))
         } catch (e: Exception) {
             dest.delete()
             throw e
@@ -360,33 +380,62 @@ object Telechargeur {
         }
     }
 
+    /**
+     * Comme [pistes], mais vérifie aussi qu'on arrive vraiment à lire des images / du son
+     * (un fichier coupé ou abîmé est refusé au lieu d'arriver illisible dans la bibliothèque).
+     */
+    private fun pistesLisibles(f: File): Pair<Boolean, Boolean> {
+        val (v, a) = pistes(f)
+        fun lisible(prefixe: String): Boolean {
+            val ex = MediaExtractor()
+            return try {
+                ex.setDataSource(f.absolutePath)
+                val i = piste(ex, prefixe) ?: return false
+                ex.selectTrack(i)
+                val tampon = ByteBuffer.allocateDirect(4 * 1024 * 1024)
+                var n = 0
+                while (n < 30 && ex.readSampleData(tampon, 0) >= 0) { n++; ex.advance() }
+                n >= 5
+            } catch (e: Exception) {
+                false
+            } finally {
+                ex.release()
+            }
+        }
+        return (v && lisible("video/")) to (a && lisible("audio/"))
+    }
+
     /** Assemble l'image d'un fichier et le son d'un autre, sans réencodage. */
-    private fun fusionner(video: File, audio: File, sortie: File): Boolean {
-        val exV = MediaExtractor().apply { setDataSource(video.absolutePath) }
-        val exA = MediaExtractor().apply { setDataSource(audio.absolutePath) }
+    private fun fusionner(video: File, audio: File?, sortie: File): Boolean {
+        val exV = MediaExtractor()
+        // Sans fichier son à part : on reprend le son du fichier vidéo lui-même (s'il en a).
+        val exA = MediaExtractor()
         var muxer: MediaMuxer? = null
         try {
+            exV.setDataSource(video.absolutePath)
+            exA.setDataSource((audio ?: video).absolutePath)
             val iv = piste(exV, "video/") ?: return false
-            val ia = piste(exA, "audio/") ?: return false
+            val ia = piste(exA, "audio/")
             exV.selectTrack(iv)
-            exA.selectTrack(ia)
+            if (ia != null) exA.selectTrack(ia)
             val formatV = exV.getTrackFormat(iv)
-            val formatA = exA.getTrackFormat(ia)
+            val formatA = ia?.let { exA.getTrackFormat(it) }
             val m = MediaMuxer(sortie.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             muxer = m
             if (formatV.containsKey(MediaFormat.KEY_ROTATION)) m.setOrientationHint(formatV.getInteger(MediaFormat.KEY_ROTATION))
             val tv = m.addTrack(formatV)
-            val ta = m.addTrack(formatA)
+            val ta = formatA?.let { m.addTrack(it) } ?: -1
             m.start()
             val taille = maxOf(
                 if (formatV.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) formatV.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else 0,
-                if (formatA.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) formatA.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else 0,
+                if (formatA?.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE) == true) formatA.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else 0,
                 4 * 1024 * 1024,
             )
             val tampon = ByteBuffer.allocateDirect(taille)
             val infos = MediaCodec.BufferInfo()
             var finV = false
-            var finA = false
+            var finA = formatA == null
+            var images = 0
             // On écrit l'image et le son en alternance, dans l'ordre du temps.
             while (!finV || !finA) {
                 val tempsV = if (finV) Long.MAX_VALUE else exV.sampleTime
@@ -403,10 +452,11 @@ object Telechargeur {
                 infos.presentationTimeUs = ex.sampleTime
                 infos.flags = if (ex.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC != 0) MediaCodec.BUFFER_FLAG_KEY_FRAME else 0
                 m.writeSampleData(if (prendreV) tv else ta, tampon, infos)
+                if (prendreV) images++
                 ex.advance()
             }
             m.stop()
-            return true
+            return images > 0
         } catch (e: Exception) {
             sortie.delete()
             return false

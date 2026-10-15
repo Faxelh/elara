@@ -53,10 +53,12 @@
     <string name="enregistrer_galerie">Enregistrer</string>
     <string name="enregistrer_image_question">L\'enregistrer dans la galerie ?</string>
     <string name="enregistres_galerie">%d enregistré(s) dans la galerie (dossier Elara).</string>
+    <string name="erreur_abime">Le fichier reçu est abîmé et ne peut pas être lu. Laissez la vidéo jouer quelques secondes puis réessayez.</string>
     <string name="erreur_ajout">Le fichier téléchargé n\'a pas pu être ajouté.</string>
     <string name="erreur_facebook">Vidéo Facebook introuvable. Ouvrez-la dans l\'onglet Facebook, lancez la lecture puis touchez Télécharger.</string>
     <string name="erreur_galerie">Impossible d\'enregistrer dans la galerie.</string>
     <string name="erreur_image">Impossible d\'enregistrer l\'image.</string>
+    <string name="erreur_incomplet">Le téléchargement a été coupé avant la fin. Réessayez.</string>
     <string name="erreur_inconnue">Le téléchargement a échoué.</string>
     <string name="erreur_introuvable">Impossible de trouver le fichier de cette vidéo. Laissez-la jouer quelques secondes puis réessayez.</string>
     <string name="erreur_lien_invalide">Lien invalide : il doit commencer par http:// ou https://</string>

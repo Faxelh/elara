@@ -53,10 +53,12 @@
     <string name="enregistrer_galerie">Сохранить</string>
     <string name="enregistrer_image_question">Сохранить в галерею?</string>
     <string name="enregistres_galerie">Сохранено в галерею (папка Elara): %d.</string>
+    <string name="erreur_abime">Полученный файл повреждён и не воспроизводится. Дайте видео поиграть несколько секунд и повторите.</string>
     <string name="erreur_ajout">Не удалось добавить загруженный файл.</string>
     <string name="erreur_facebook">Видео Facebook не найдено. Откройте его на вкладке Facebook, запустите и нажмите «Скачать».</string>
     <string name="erreur_galerie">Не удалось сохранить в галерею.</string>
     <string name="erreur_image">Не удалось сохранить изображение.</string>
+    <string name="erreur_incomplet">Загрузка прервалась. Повторите попытку.</string>
     <string name="erreur_inconnue">Загрузка не удалась.</string>
     <string name="erreur_introuvable">Не удалось найти файл видео. Дайте ему поиграть несколько секунд и повторите.</string>
     <string name="erreur_lien_invalide">Неверная ссылка: она должна начинаться с http:// или https://</string>

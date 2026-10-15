@@ -53,10 +53,12 @@
     <string name="enregistrer_galerie">Guardar</string>
     <string name="enregistrer_image_question">¿Guardarla en la galería?</string>
     <string name="enregistres_galerie">%d guardado(s) en la galería (carpeta Elara).</string>
+    <string name="erreur_abime">El archivo recibido está dañado y no se puede reproducir. Deja que el vídeo se reproduzca unos segundos y vuelve a intentarlo.</string>
     <string name="erreur_ajout">No se pudo añadir el archivo descargado.</string>
     <string name="erreur_facebook">Vídeo de Facebook no encontrado. Ábrelo en la pestaña Facebook, reprodúcelo y toca Descargar.</string>
     <string name="erreur_galerie">No se pudo guardar en la galería.</string>
     <string name="erreur_image">No se pudo guardar la imagen.</string>
+    <string name="erreur_incomplet">La descarga se cortó antes de terminar. Inténtalo de nuevo.</string>
     <string name="erreur_inconnue">La descarga falló.</string>
     <string name="erreur_introuvable">No se encontró el archivo del vídeo. Déjalo reproducir unos segundos y vuelve a intentarlo.</string>
     <string name="erreur_lien_invalide">Enlace no válido: debe empezar por http:// o https://</string>

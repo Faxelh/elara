@@ -1,4 +1,5 @@
 # 15 octobre 2026
+- Android : les vidéos Facebook téléchargées sont vérifiées et réécrites en MP4 propre ; un fichier abîmé ou coupé n'est plus ajouté (message clair à la place).
 - Android : lecture plus robuste (autre décodeur si besoin, nouvelle tentative automatique) et message clair en cas d'échec.
 - Nom de l'application modifiable (Réglages › À propos) et proposé après chaque mise à jour.
 - Numéro de version automatique : Année.Mois.N.

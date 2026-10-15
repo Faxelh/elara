@@ -53,10 +53,12 @@
     <string name="enregistrer_galerie">Save</string>
     <string name="enregistrer_image_question">Save it to the gallery?</string>
     <string name="enregistres_galerie">%d saved to the gallery (Elara folder).</string>
+    <string name="erreur_abime">The received file is damaged and can\'t be played. Let the video play for a few seconds, then try again.</string>
     <string name="erreur_ajout">The downloaded file couldn\'t be added.</string>
     <string name="erreur_facebook">Facebook video not found. Open it in the Facebook tab, play it, then tap Download.</string>
     <string name="erreur_galerie">Couldn\'t save to the gallery.</string>
     <string name="erreur_image">Couldn\'t save the image.</string>
+    <string name="erreur_incomplet">The download was cut off before the end. Try again.</string>
     <string name="erreur_inconnue">The download failed.</string>
     <string name="erreur_introuvable">Couldn\'t find this video\'s file. Let it play for a few seconds, then try again.</string>
     <string name="erreur_lien_invalide">Invalid link: it must start with http:// or https://</string>
