@@ -339,20 +339,8 @@ struct VignetteMedia: View {
         }
     }
 
-    @ViewBuilder
     private var apercu: some View {
-        let _ = bib.versionMiniatures
-        if media.type == .video,
-           let image = UIImage(contentsOfFile: bib.urlMiniature(de: media).path) {
-            Image(uiImage: image).resizable().scaledToFill()
-        } else {
-            ZStack {
-                Theme.degrade
-                Image(systemName: media.type == .audio ? "music.note" : "film")
-                    .font(.largeTitle)
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-        }
+        ImageMiniature(media: media)
     }
 }
 

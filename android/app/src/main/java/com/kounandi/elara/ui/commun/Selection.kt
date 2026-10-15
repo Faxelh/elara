@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Lock
@@ -124,6 +125,7 @@ fun BarreSelection(selection: Selection, medias: List<Media>, dossiers: List<Dos
     var deplacer by remember { mutableStateOf(false) }
     var supprimer by remember { mutableStateOf(false) }
     var enregistrement by remember { mutableStateOf(false) }
+    var filigrane by remember { mutableStateOf<List<Media>?>(null) }
 
     fun enregistrer() {
         enregistrement = true
@@ -164,7 +166,17 @@ fun BarreSelection(selection: Selection, medias: List<Media>, dossiers: List<Dos
             choisis.filter { it.prive == tousPrives }.forEach { Bibliotheque.basculerPrive(it) }
             selection.quitter()
         }
+        Action(Icons.Filled.BlurOn, stringResource(R.string.filigrane), actif && choisis.any { it.type == TypeMedia.VIDEO }) {
+            filigrane = choisis.filter { it.type == TypeMedia.VIDEO }
+        }
         Action(Icons.Filled.Delete, stringResource(R.string.supprimer), actif, couleur = Elara.corail) { supprimer = true }
+    }
+
+    filigrane?.let { liste ->
+        FiligraneEcran(liste) {
+            filigrane = null
+            selection.quitter()
+        }
     }
 
     if (deplacer) {

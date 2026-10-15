@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartDisplay
-import androidx.compose.material.icons.filled.MusicVideo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -15,6 +14,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,8 +73,8 @@ fun Racine(activite: MainActivity) {
                         )
                         NavigationBarItem(
                             selected = onglet == 4, onClick = { Reglages.changerOnglet(4) },
-                            icon = { Icon(Icons.Filled.MusicVideo, null) },
-                            label = { Text("TikTok") }, colors = couleurs,
+                            icon = { Text("𝕏", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+                            label = { Text("X") }, colors = couleurs,
                         )
                         NavigationBarItem(
                             selected = onglet == 3, onClick = { Reglages.changerOnglet(3) },
@@ -94,7 +94,7 @@ fun Racine(activite: MainActivity) {
                 0 -> AccueilEcran(marges, activite)
                 1 -> FacebookEcran(marges, pleinEcranFacebook) { pleinEcranFacebook = it }
                 3 -> com.kounandi.elara.ui.youtube.YouTubeEcran(marges)
-                4 -> com.kounandi.elara.ui.tiktok.TikTokEcran(marges)
+                4 -> com.kounandi.elara.ui.x.XEcran(marges)
                 else -> ReglagesEcran(marges, activite)
             }
         }

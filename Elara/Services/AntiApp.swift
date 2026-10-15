@@ -28,7 +28,7 @@ enum AntiApp {
     'continuer dans le navigateur', 'continue in browser', 'rester sur le navigateur', 'continuer sur le web',
     'continue on web', 'stay on web', 'continuer avec le navigateur', 'fermer', 'close', 'ignorer', 'dismiss',
     'ne pas ouvrir', 'continuer sur le site'];
-  var LIEN_APP = /^(intent|snssdk\d*|tiktok|fb|fb-messenger|youtube|vnd\.youtube|itms-apps|itms-appss|market):|apps\.apple\.com|itunes\.apple\.com|play\.google\.com\/store|app\.adjust\.|onelink\.me|app\.link/i;
+  var LIEN_APP = /^(intent|snssdk\d*|tiktok|twitter|fb|fb-messenger|youtube|vnd\.youtube|itms-apps|itms-appss|market):|apps\.apple\.com|itunes\.apple\.com|play\.google\.com\/store|app\.adjust\.|onelink\.me|app\.link/i;
 
   var style = document.createElement('style');
   style.textContent = 'ytm-mealbar-promo-renderer, ytm-app-promo-renderer, ytm-upsell-dialog-renderer { display: none !important; }';
@@ -101,11 +101,26 @@ enum AntiApp {
     return null;
   }
 
+  // Pour rester fluide : on n'analyse que les morceaux de page qui viennent d'apparaître,
+  // en petites tranches pendant les temps morts du navigateur (pas de gel pendant le défilement).
+  var aAnalyser = [];
+  var toutAnalyser = true;
+
   function nettoyer() {
     ajouterStyle();
-    var promos = textesCourts(document.body, function (t) { return t.length < 60 && PROMO.test(t); });
-    var liens = document.querySelectorAll('a[href]');
-    for (var k = 0; k < liens.length; k++) { if (LIEN_APP.test(liens[k].getAttribute('href'))) promos.push(liens[k]); }
+    var racines = toutAnalyser ? [document.body] : aAnalyser.splice(0, 40);
+    toutAnalyser = false;
+    var promos = [];
+    for (var r0 = 0; r0 < racines.length; r0++) {
+      var racine = racines[r0];
+      if (!racine || !racine.isConnected) continue;
+      if (racine.nodeType === 3) racine = racine.parentElement;
+      if (!racine || racine.nodeType !== 1) continue;
+      promos = promos.concat(textesCourts(racine, function (t) { return t.length < 60 && PROMO.test(t); }));
+      if (racine.matches && racine.matches('a[href]') && LIEN_APP.test(racine.getAttribute('href'))) promos.push(racine);
+      var liens = racine.querySelectorAll ? racine.querySelectorAll('a[href]') : [];
+      for (var k = 0; k < liens.length; k++) { if (LIEN_APP.test(liens[k].getAttribute('href'))) promos.push(liens[k]); }
+    }
     for (var i = 0; i < promos.length; i++) {
       var el = cliquable(promos[i]);
       if (el.__elaraVu || el.getAttribute('data-elara-cache')) continue;
@@ -142,12 +157,29 @@ enum AntiApp {
   }, true);
 
   var prevu = null;
+  var attente = window.requestIdleCallback || function (f) { return setTimeout(f, 1); };
   function planifier() {
     if (prevu) return;
-    prevu = setTimeout(function () { prevu = null; try { nettoyer(); } catch (e) {} }, 500);
+    prevu = setTimeout(function () {
+      attente(function () {
+        prevu = null;
+        try { nettoyer(); } catch (e) {}
+        if (aAnalyser.length) planifier();
+      });
+    }, 400);
   }
-  new MutationObserver(planifier).observe(document.documentElement, { childList: true, subtree: true });
-  document.addEventListener('DOMContentLoaded', planifier);
+  new MutationObserver(function (liste) {
+    for (var i = 0; i < liste.length; i++) {
+      var ajoutes = liste[i].addedNodes;
+      for (var j = 0; j < ajoutes.length; j++) {
+        var n = ajoutes[j];
+        if (n.nodeType === 1 || n.nodeType === 3) aAnalyser.push(n);
+      }
+    }
+    if (aAnalyser.length > 400) { aAnalyser = []; toutAnalyser = true; }
+    if (aAnalyser.length || toutAnalyser) planifier();
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', function () { toutAnalyser = true; planifier(); });
   planifier();
 })();
 """#

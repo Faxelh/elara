@@ -4,9 +4,12 @@
     <string name="accueil_racine">Главная (без папки)</string>
     <string name="accueil_youtube">Главная YouTube</string>
     <string name="actions">Действия</string>
+    <string name="aide_effacer">Стереть: область восстанавливается по окружающим цветам, без размытия. Поставьте рамку точно на знак.</string>
+    <string name="aide_recadrer">Обрезать: полоса с водяным знаком отрезается (тёмная часть). Без следов, кадр чуть меньше.</string>
     <string name="aide_telecharger">Вставьте прямую ссылку на видео- или аудиофайл (mp4, mov, mp3, m4a…) или ссылку на видео Facebook. Совет: на вкладке Facebook запустите видео и нажмите «Скачать».</string>
     <string name="ajoute_a_elara">Добавлено в Elara: %s</string>
     <string name="ajouter">Добавить</string>
+    <string name="ajouter_zone">+ Зона</string>
     <string name="ajuster_ecran">Вписать в экран</string>
     <string name="annuler">Отмена</string>
     <string name="app_name">Elara</string>
@@ -24,6 +27,11 @@
     <string name="code_faux">Неверный код</string>
     <string name="code_longueur">От 4 до 8 цифр</string>
     <string name="codes_differents">Коды не совпадают. Попробуйте снова.</string>
+    <string name="coin_bas_centre">Внизу по центру</string>
+    <string name="coin_bas_droite">Внизу справа</string>
+    <string name="coin_bas_gauche">Внизу слева</string>
+    <string name="coin_haut_droite">Вверху справа</string>
+    <string name="coin_haut_gauche">Вверху слева</string>
     <string name="coller_lien">Вставить ссылку</string>
     <string name="coller_lien_tiktok">Вставить ссылку TikTok</string>
     <string name="confirmer_code">Повторите код</string>
@@ -39,6 +47,7 @@
     <string name="dessiner_schema">Нарисуйте свой ключ</string>
     <string name="deverrouiller_ecran">Разблокировать экран</string>
     <string name="doublons_supprimes">Удалено дубликатов: %d.</string>
+    <string name="effacer">Стереть</string>
     <string name="empreinte_visage">Отпечаток / лицо</string>
     <string name="enregistrer_galerie">Сохранить</string>
     <string name="enregistrer_image_question">Сохранить в галерею?</string>
@@ -53,12 +62,18 @@
     <string name="erreur_pas_media">Ссылка не ведёт на поддерживаемое видео или аудио (mp4, mov, mp3, m4a…).</string>
     <string name="erreur_plateforme">Elara не скачивает со стриминговых платформ и других соцсетей. Используйте прямую ссылку на файл.</string>
     <string name="erreur_serveur">Сервер ответил ошибкой %d.</string>
+    <string name="erreur_x_introuvable">Этот пост X не найден или закрыт.</string>
+    <string name="erreur_x_sans_video">В этом посте X нет видео.</string>
     <string name="etirer">Растянуть</string>
     <string name="fermer">Закрыть</string>
     <string name="fermer_lecteur">Закрыть плеер</string>
     <string name="fichiers">Файлы</string>
     <string name="fil_actualite">Лента новостей</string>
+    <string name="filigrane">Водяной знак</string>
+    <string name="filigrane_aide">Перетащите рамку на водяной знак и измените размер кружком. Добавьте зону, если знак перемещается.</string>
+    <string name="filigrane_termine">Водяной знак скрыт на видео: %d.</string>
     <string name="fin_video">В конце видео</string>
+    <string name="garder_original">Сохранить и оригинал</string>
     <string name="geste_luminosite">Яркость (жест слева)</string>
     <string name="geste_volume">Громкость (жест справа)</string>
     <string name="image">Изображение</string>
@@ -77,6 +92,8 @@
     <string name="maj_disponible">Доступно обновление</string>
     <string name="maj_erreur">Не удалось проверить или скачать обновление. Проверьте подключение.</string>
     <string name="maj_texte">Доступна Elara %1$s (у вас %2$s).</string>
+    <string name="masquer_filigrane">Скрыть водяной знак</string>
+    <string name="masquer_sur_n">Скрыть на %d видео</string>
     <string name="methode_code">Код</string>
     <string name="methode_code_texte">От 4 до 8 цифр</string>
     <string name="methode_schema">Графический ключ</string>
@@ -104,6 +121,7 @@
     <string name="plein_ecran">Во весь экран</string>
     <string name="plus_options">Другие параметры</string>
     <string name="plus_tard">Позже</string>
+    <string name="position">Положение</string>
     <string name="position_file">%1$d из %2$d</string>
     <string name="precedent">Предыдущее</string>
     <string name="prive">Личное</string>
@@ -111,6 +129,7 @@
     <string name="proteger_prive_texte">Выберите способ открытия личных видео.</string>
     <string name="quitter_plein_ecran">Выйти из полноэкранного режима</string>
     <string name="ranger_prive">Сохранить в личную папку</string>
+    <string name="recadrer">Обрезать</string>
     <string name="recharger">Обновить</string>
     <string name="recherche_video">Поиск видео…</string>
     <string name="rechercher_maj">Проверить обновления</string>
@@ -120,7 +139,10 @@
     <string name="renommer">Переименовать</string>
     <string name="repeter_video">Повторять это видео</string>
     <string name="reprendre_lecture">Продолжать с места остановки</string>
+    <string name="retirer">Убрать</string>
+    <string name="retirer_filigrane">Убрать водяной знак</string>
     <string name="retirer_prive">Убрать из личного</string>
+    <string name="retirer_sur_n">Убрать на %d видео</string>
     <string name="retour">Назад</string>
     <string name="saisir_code">Введите код</string>
     <string name="schema_faux">Неверный ключ</string>
@@ -172,6 +194,7 @@
     <string name="vide_prive">Личная папка пуста. Нажмите +, чтобы добавить видео.</string>
     <string name="video_ajoutee">Видео добавлено в Elara</string>
     <string name="video_en_lecture">Видео воспроизводится</string>
+    <string name="video_n_sur">Видео %1$d из %2$d…</string>
     <string name="videos">Видео</string>
     <string name="vitesse">Скорость</string>
     <plurals name="elements">

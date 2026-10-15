@@ -58,6 +58,8 @@ object NavigateurFacebook {
     /** Fichiers vidéo / son reçus par la page pendant la lecture (le plus récent à la fin). */
     private data class Flux(val url: String, val chemin: String, val audio: Boolean, val video: Boolean, val asset: String?)
     private val flux = ArrayList<Flux>()
+    /** Moments où chaque vidéo (asset) a demandé un morceau : la vidéo qui joue en demande sans arrêt. */
+    private val activite = HashMap<String, ArrayList<Long>>()
 
     @SuppressLint("SetJavaScriptEnabled")
     fun vue(ctx: Context): WebView {
@@ -92,19 +94,28 @@ object NavigateurFacebook {
             WebViewCompat.addDocumentStartJavaScript(
                 w, SCRIPT, setOf("https://facebook.com", "https://*.facebook.com"),
             )
+            WebViewCompat.addDocumentStartJavaScript(
+                w, SCRIPT_REELS, setOf("https://facebook.com", "https://*.facebook.com"),
+            )
         }
         w.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 chargement = true
                 maj(view)
-                if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) view.evaluateJavascript(SCRIPT, null)
+                if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    view.evaluateJavascript(SCRIPT, null)
+                    view.evaluateJavascript(SCRIPT_REELS, null)
+                }
                 view.evaluateJavascript(AntiApp.SCRIPT, null)
             }
 
             override fun onPageFinished(view: WebView, url: String?) {
                 chargement = false
                 maj(view)
-                if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) view.evaluateJavascript(SCRIPT, null)
+                if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    view.evaluateJavascript(SCRIPT, null)
+                    view.evaluateJavascript(SCRIPT_REELS, null)
+                }
                 view.evaluateJavascript(AntiApp.SCRIPT, null)
                 url?.let { u -> if (Uri.parse(u).host?.let { Telechargeur.estFacebook(it) } == true) Reglages.ecrireTexte("facebook.page", u) }
                 CookieManager.getInstance().flush()
@@ -201,31 +212,50 @@ object NavigateurFacebook {
         val video = !audio && code.isNotBlank()
         val asset = Regex("\"xpv_asset_id\"\\s*:\\s*\"?(\\d+)").find(tag)?.groupValues?.get(1)
         synchronized(flux) {
+            if (asset != null) {
+                val act = activite.getOrPut(asset) { ArrayList() }
+                act.add(System.currentTimeMillis())
+                while (act.size > 200) act.removeAt(0)
+            }
             flux.removeAll { it.chemin == chemin }
             flux.add(Flux(propre, chemin, audio, video, asset))
-            while (flux.size > 40) flux.removeAt(0)
+            while (flux.size > 60) flux.removeAt(0)
         }
     }
 
-    /** Image + son de la vidéo en cours (même numéro de vidéo), s'ils sont connus. */
-    private fun paireActuelle(): List<String>? = synchronized(flux) {
-        val recent = flux.lastOrNull { it.asset != null } ?: return null
-        val memes = flux.filter { it.asset == recent.asset }
-        val image = memes.lastOrNull { !it.audio } ?: return null
-        val son = memes.lastOrNull { it.audio } ?: return null
-        listOf(image.url, son.url)
+    /**
+     * Vidéo en cours de lecture : celle qui demande le plus de morceaux en ce moment
+     * (les Reels suivants ne sont que préchargés). Doit appeler sous synchronized(flux).
+     */
+    private fun assetActuel(): String? {
+        val maintenant = System.currentTimeMillis()
+        return activite.keys
+            .filter { a -> flux.any { it.asset == a && !it.audio } }
+            .maxWithOrNull(compareBy<String>(
+                { a -> activite[a]!!.count { maintenant - it < 15_000 } },
+                { a -> activite[a]!!.count { maintenant - it < 60_000 } },
+                { a -> activite[a]!!.last() },
+            ))
     }
 
-    /** Les derniers fichiers vus, le plus récent d'abord (Elara trie ensuite l'image et le son). */
+    /** Image + son de LA vidéo en cours (même asset) — jamais le son d'une autre vidéo. */
+    private fun paireActuelle(): List<String>? = synchronized(flux) {
+        val asset = assetActuel() ?: return null
+        val memes = flux.filter { it.asset == asset }
+        val image = memes.lastOrNull { !it.audio } ?: return null
+        listOfNotNull(image.url, memes.lastOrNull { it.audio }?.url)
+    }
+
+    /** Derniers fichiers vus sans étiquette de vidéo (si Facebook n'en donne pas), le plus récent d'abord. */
     private fun candidats(): List<String> = synchronized(flux) {
+        if (flux.any { it.asset != null }) return emptyList()
         flux.takeLast(6).reversed().map { it.url }
     }
 
-    /** Fichiers « son seul » vus récemment (pour ajouter le son à une vidéo muette). */
+    /** Son de la vidéo en cours uniquement (pour ajouter le son à une vidéo muette). */
     fun sonsRecents(): List<String> = synchronized(flux) {
-        val recent = flux.lastOrNull { it.asset != null }?.asset
-        val sons = flux.filter { it.audio }.reversed()
-        (sons.filter { it.asset == recent } + sons.filter { it.asset != recent }).map { it.url }.take(3)
+        val asset = assetActuel() ?: return emptyList()
+        flux.filter { it.audio && it.asset == asset }.reversed().map { it.url }.take(1)
     }
 
     // MARK: Recherche du fichier
@@ -299,6 +329,65 @@ object NavigateurFacebook {
     }
 
     /** Repère les vidéos lancées et garde les liens des fichiers vidéo envoyés à la page. */
+    /** Reels : à la fin d'un Reel, « Suivante dans 2 s » puis passage automatique au suivant. */
+    private val SCRIPT_REELS = """
+(function () {
+  if (window.__elaraReels) return;
+  window.__elaraReels = true;
+  var minuteur = null, bulle = null;
+  function surReel() { return /\/reels?\b/.test(location.pathname); }
+  function annuler() {
+    if (minuteur) { clearTimeout(minuteur); minuteur = null; }
+    if (bulle) { bulle.remove(); bulle = null; }
+  }
+  function defilant(el) {
+    for (var n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      var s = getComputedStyle(n);
+      if (/(auto|scroll)/.test(s.overflowY) && n.scrollHeight > n.clientHeight + 10) return n;
+    }
+    return null;
+  }
+  function suivante(v) {
+    annuler();
+    var r0 = v.getBoundingClientRect();
+    var prochaine = null, haut = Infinity;
+    document.querySelectorAll('video').forEach(function (x) {
+      if (x === v) return;
+      var t = x.getBoundingClientRect().top;
+      if (t > r0.top + 20 && t < haut) { haut = t; prochaine = x; }
+    });
+    var c = defilant(v);
+    if (prochaine) prochaine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else if (c) c.scrollBy({ top: c.clientHeight, behavior: 'smooth' });
+    else window.scrollBy({ top: innerHeight, behavior: 'smooth' });
+  }
+  // À la fin d'un Reel : « Suivante dans 2 s », puis passage au Reel suivant.
+  function annoncer(v) {
+    if (minuteur || !surReel()) return;
+    bulle = document.createElement('div');
+    bulle.textContent = 'Suivante dans 2 s';
+    bulle.style.cssText = 'position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483647;' +
+      'background:rgba(0,0,0,.72);color:#fff;font:600 14px -apple-system,Roboto,sans-serif;padding:8px 14px;' +
+      'border-radius:18px;pointer-events:none';
+    (document.body || document.documentElement).appendChild(bulle);
+    minuteur = setTimeout(function () { minuteur = null; suivante(v); }, 2000);
+  }
+  document.addEventListener('ended', function (e) {
+    if (e.target && e.target.tagName === 'VIDEO') annoncer(e.target);
+  }, true);
+  // Les Reels tournent en boucle : on repère le retour au début.
+  document.addEventListener('timeupdate', function (e) {
+    var v = e.target;
+    if (!v || v.tagName !== 'VIDEO') return;
+    var avant = v.__elaraT || 0;
+    v.__elaraT = v.currentTime;
+    if (v.duration > 2 && avant > v.duration - 1.2 && v.currentTime < 1) annoncer(v);
+  }, true);
+  // Le moindre geste de l'utilisateur annule le passage automatique.
+  ['touchstart', 'wheel'].forEach(function (t) { document.addEventListener(t, annuler, { capture: true, passive: true }); });
+})();
+""".trimIndent()
+
     private val SCRIPT = """
     (function () {
       if (window.__elara) return;

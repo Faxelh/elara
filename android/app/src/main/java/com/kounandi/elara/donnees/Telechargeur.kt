@@ -50,6 +50,90 @@ object Telechargeur {
 
     fun estFacebook(hote: String) = facebook.any { hote == it || hote.endsWith(".$it") }
     private fun estRefuse(hote: String) = refuses.any { hote == it || hote.endsWith(".$it") }
+    fun estX(hote: String) = hote in setOf("x.com", "twitter.com", "mobile.twitter.com", "mobile.x.com", "www.x.com", "www.twitter.com")
+
+    /** Numéro du post X (Twitter) dans un lien x.com/…/status/123. */
+    fun numeroX(texte: String?): String? =
+        texte?.let { Regex("(?:x|twitter)\\.com/[^/?#]+/status(?:es)?/(\\d+)").find(it)?.groupValues?.get(1) }
+
+    /** Jeton du service d'intégration des posts X : même calcul que les intégrations officielles (JavaScript, pour être exact). */
+    private suspend fun jetonX(ctx: Context, numero: String): String = withContext(Dispatchers.Main) {
+        val w = android.webkit.WebView(ctx.applicationContext)
+        w.settings.javaScriptEnabled = true
+        try {
+            kotlinx.coroutines.withTimeoutOrNull(5000) {
+                kotlinx.coroutines.suspendCancellableCoroutine<String?> { suite ->
+                    w.evaluateJavascript("((Number('$numero') / 1e15) * Math.PI).toString(36).replace(/(0+|\\.)/g, '')") { brut ->
+                        suite.resumeWith(Result.success(runCatching { org.json.JSONTokener(brut).nextValue() as? String }.getOrNull()))
+                    }
+                }
+            } ?: "a"
+        } finally {
+            w.destroy()
+        }
+    }
+
+    /** Fichier mp4 (meilleure qualité) de la vidéo d'un post X. */
+    suspend fun lienVideoX(ctx: Context, numero: String): String {
+        val jeton = jetonX(ctx, numero)
+        return withContext(Dispatchers.IO) {
+            val c = URL("https://cdn.syndication.twimg.com/tweet-result?id=$numero&lang=fr&token=$jeton").openConnection() as HttpURLConnection
+            c.setRequestProperty("User-Agent", AGENT_MOBILE)
+            c.connectTimeout = 15_000
+            c.readTimeout = 20_000
+            try {
+                if (c.responseCode != 200) throw ErreurTelechargement(ctx.getString(R.string.erreur_x_introuvable))
+                val racine = org.json.JSONObject(c.inputStream.bufferedReader().readText())
+                val variantes = mutableListOf<Pair<String, Long>>()
+                fun lire(liste: org.json.JSONArray?) {
+                    if (liste == null) return
+                    for (i in 0 until liste.length()) {
+                        val v = liste.optJSONObject(i) ?: continue
+                        val type = v.optString("content_type").ifEmpty { v.optString("type") }
+                        val lien = v.optString("url").ifEmpty { v.optString("src") }
+                        if (!type.contains("mp4") || !lien.startsWith("https://")) continue
+                        var debit = v.optLong("bitrate")
+                        if (debit == 0L) {
+                            Regex("/(\\d+)x(\\d+)/").find(lien)?.let { m -> debit = m.groupValues[1].toLong() * m.groupValues[2].toLong() }
+                        }
+                        variantes += lien to debit
+                    }
+                }
+                fun medias(o: org.json.JSONObject?) {
+                    val liste = o?.optJSONArray("mediaDetails") ?: return
+                    for (i in 0 until liste.length()) lire(liste.optJSONObject(i)?.optJSONObject("video_info")?.optJSONArray("variants"))
+                }
+                medias(racine)
+                lire(racine.optJSONObject("video")?.optJSONArray("variants"))
+                if (variantes.isEmpty()) medias(racine.optJSONObject("quoted_tweet"))
+                variantes.maxByOrNull { it.second }?.first ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_x_sans_video))
+            } finally {
+                c.disconnect()
+            }
+        }
+    }
+
+    /** Vidéo d'un post X (onglet X) : par son numéro, sinon le fichier vu pendant la lecture. */
+    suspend fun telechargerX(ctx: Context, numero: String?, secours: String?, prive: Boolean): Media {
+        commencer()
+        try {
+            var lien = secours
+            if (numero != null) {
+                recherche = true
+                runCatching { lienVideoX(ctx, numero) }.getOrNull()?.let { lien = it }
+                recherche = false
+            }
+            val cible = lien ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_introuvable))
+            val f = telechargerBrut(ctx, cible, 0f, 1f, mapOf("Referer" to "https://x.com/"))
+            val mp4 = File(f.parentFile, UUID.randomUUID().toString() + ".mp4")
+            f.renameTo(mp4)
+            val nom = "X " + SimpleDateFormat("yyyy-MM-dd HH'h'mm", Locale.ROOT).format(Date())
+            return Bibliotheque.importerFichier(mp4, nom, prive)
+                ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_ajout))
+        } finally {
+            finir()
+        }
+    }
 
     fun annuler() { annule = true }
 
@@ -64,12 +148,18 @@ object Telechargeur {
             throw ErreurTelechargement(ctx.getString(R.string.erreur_lien_invalide))
         }
         val hote = url.host.lowercase()
-        if (estRefuse(hote)) throw ErreurTelechargement(ctx.getString(R.string.erreur_plateforme))
+        val numeroX = if (estX(hote)) numeroX(lien) else null
+        if (numeroX == null && estRefuse(hote)) throw ErreurTelechargement(ctx.getString(R.string.erreur_plateforme))
         commencer()
         try {
             var cible = lien
             var nom: String? = null
-            if (estFacebook(hote)) {
+            if (numeroX != null) {
+                recherche = true
+                cible = lienVideoX(ctx, numeroX)
+                recherche = false
+                nom = "X " + SimpleDateFormat("yyyy-MM-dd HH'h'mm", Locale.ROOT).format(Date())
+            } else if (estFacebook(hote)) {
                 recherche = true
                 cible = ExtracteurFacebook.lienVideo(lien) ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_facebook))
                 recherche = false
@@ -225,28 +315,6 @@ object Telechargeur {
         CookieManager.getInstance().getCookie(adresse)?.let { c.setRequestProperty("Cookie", it) }
         entetes.forEach { (k, v) -> c.setRequestProperty(k, v) }
         return c
-    }
-
-    /** Vidéo TikTok (onglet TikTok) : le fichier demande la connexion TikTok et la page d'origine. */
-    suspend fun telechargerTikTok(ctx: Context, lien: String, prive: Boolean): Media {
-        commencer()
-        try {
-            val cookies = CookieManager.getInstance().getCookie("https://www.tiktok.com") ?: ""
-            val entetes = mapOf(
-                "Referer" to "https://www.tiktok.com/",
-                "Origin" to "https://www.tiktok.com",
-                "Cookie" to cookies,
-                "Range" to "bytes=0-",
-            )
-            val f = telechargerBrut(ctx, lien, 0f, 1f, entetes)
-            val mp4 = File(f.parentFile, UUID.randomUUID().toString() + ".mp4")
-            f.renameTo(mp4)
-            val nom = "TikTok " + SimpleDateFormat("yyyy-MM-dd HH'h'mm", Locale.ROOT).format(Date())
-            return Bibliotheque.importerFichier(mp4, nom, prive)
-                ?: throw ErreurTelechargement(ctx.getString(R.string.erreur_ajout))
-        } finally {
-            finir()
-        }
     }
 
     private fun extension(lien: String, type: String?, disposition: String?): String {

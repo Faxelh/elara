@@ -74,7 +74,7 @@ struct RacineView: View {
                 .tabItem { Label("Transfert", systemImage: "arrow.up.arrow.down.circle.fill") }
                 .tag(1)
             #if PERSO
-            // Facebook, TikTok et YouTube réunis dans un seul onglet.
+            // Facebook, X et YouTube réunis dans un seul onglet.
             ReseauxView()
                 .tabItem { Label("Réseaux", systemImage: "play.rectangle.on.rectangle.fill") }
                 .tag(5)

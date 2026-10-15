@@ -1,14 +1,14 @@
 #if PERSO
 import SwiftUI
 
-/// Onglet « Réseaux » : Facebook, TikTok et YouTube au même endroit.
+/// Onglet « Réseaux » : Facebook, X (Twitter) et YouTube au même endroit.
 enum Reseau: String, CaseIterable, Identifiable {
-    case facebook, tiktok, youtube
+    case facebook, x, youtube
     var id: String { rawValue }
     var titre: String {
         switch self {
         case .facebook: "Facebook"
-        case .tiktok: "TikTok"
+        case .x: "X"
         case .youtube: "YouTube"
         }
     }
@@ -20,13 +20,13 @@ struct ReseauxView: View {
     var body: some View {
         switch reseau {
         case .facebook: FacebookView()
-        case .tiktok: TikTokView()
+        case .x: XView()
         case .youtube: YouTubeView()
         }
     }
 }
 
-/// Choix Facebook / TikTok / YouTube, affiché en haut de chaque réseau.
+/// Choix Facebook / X / YouTube, affiché en haut de chaque réseau.
 struct SelecteurReseau: View {
     @AppStorage("reseau") private var reseau: Reseau = .facebook
 

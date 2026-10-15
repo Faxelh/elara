@@ -45,6 +45,7 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
         let controleur = WKUserContentController()
         controleur.addUserScript(WKUserScript(source: Self.script, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         controleur.addUserScript(AntiApp.userScript)
+        controleur.addUserScript(WKUserScript(source: Self.scriptReels, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         configuration.userContentController = controleur
         vue = WKWebView(frame: .zero, configuration: configuration)
         vue.customUserAgent = ExtracteurFacebook.agentMobile
@@ -122,8 +123,10 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
 
     /// Les 4 derniers fichiers vidéo / son reçus par la page, le plus récent d'abord.
     private func candidatsFlux() async -> [URL] {
+        // L'image et le son de LA vidéo qui joue ; à défaut (fichiers sans étiquette), les derniers vus.
         let js = """
-        JSON.stringify((window.__elaraFlux || []).slice(-4).reverse().map(function(e){ return e.url; }))
+        JSON.stringify((window.__elaraPaire && window.__elaraPaire().length) ? window.__elaraPaire()
+          : (window.__elaraFlux || []).filter(function(e){ return !e.asset; }).slice(-4).reverse().map(function(e){ return e.url; }))
         """
         guard let texte = await evaluer(js),
               let liste = try? JSONSerialization.jsonObject(with: Data(texte.utf8)) as? [String] else { return [] }
@@ -248,12 +251,91 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
 
     /// Repère les vidéos lancées et garde en mémoire les liens des fichiers vidéo
     /// envoyés par Facebook à la page (pour retrouver celui de la vidéo regardée).
+    /// Reels : à la fin d'un Reel, « Suivante dans 2 s » puis passage automatique au suivant.
+    static let scriptReels = #"""
+(function () {
+  if (window.__elaraReels) return;
+  window.__elaraReels = true;
+  var minuteur = null, bulle = null;
+  function surReel() { return /\/reels?\b/.test(location.pathname); }
+  function annuler() {
+    if (minuteur) { clearTimeout(minuteur); minuteur = null; }
+    if (bulle) { bulle.remove(); bulle = null; }
+  }
+  function defilant(el) {
+    for (var n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      var s = getComputedStyle(n);
+      if (/(auto|scroll)/.test(s.overflowY) && n.scrollHeight > n.clientHeight + 10) return n;
+    }
+    return null;
+  }
+  function suivante(v) {
+    annuler();
+    var r0 = v.getBoundingClientRect();
+    var prochaine = null, haut = Infinity;
+    document.querySelectorAll('video').forEach(function (x) {
+      if (x === v) return;
+      var t = x.getBoundingClientRect().top;
+      if (t > r0.top + 20 && t < haut) { haut = t; prochaine = x; }
+    });
+    var c = defilant(v);
+    if (prochaine) prochaine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else if (c) c.scrollBy({ top: c.clientHeight, behavior: 'smooth' });
+    else window.scrollBy({ top: innerHeight, behavior: 'smooth' });
+  }
+  // À la fin d'un Reel : « Suivante dans 2 s », puis passage au Reel suivant.
+  function annoncer(v) {
+    if (minuteur || !surReel()) return;
+    bulle = document.createElement('div');
+    bulle.textContent = 'Suivante dans 2 s';
+    bulle.style.cssText = 'position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483647;' +
+      'background:rgba(0,0,0,.72);color:#fff;font:600 14px -apple-system,Roboto,sans-serif;padding:8px 14px;' +
+      'border-radius:18px;pointer-events:none';
+    (document.body || document.documentElement).appendChild(bulle);
+    minuteur = setTimeout(function () { minuteur = null; suivante(v); }, 2000);
+  }
+  document.addEventListener('ended', function (e) {
+    if (e.target && e.target.tagName === 'VIDEO') annoncer(e.target);
+  }, true);
+  // Les Reels tournent en boucle : on repère le retour au début.
+  document.addEventListener('timeupdate', function (e) {
+    var v = e.target;
+    if (!v || v.tagName !== 'VIDEO') return;
+    var avant = v.__elaraT || 0;
+    v.__elaraT = v.currentTime;
+    if (v.duration > 2 && avant > v.duration - 1.2 && v.currentTime < 1) annoncer(v);
+  }, true);
+  // Le moindre geste de l'utilisateur annule le passage automatique.
+  ['touchstart', 'wheel'].forEach(function (t) { document.addEventListener(t, annuler, { capture: true, passive: true }); });
+})();
+"""#
+
     static let script = #"""
     (function () {
       if (window.__elara) return;
       window.__elara = true;
       window.__elaraVideos = {};
       window.__elaraFlux = [];
+      window.__elaraActivite = {};
+
+      // Vidéo en cours de lecture = celle dont la page demande le plus de morceaux en ce moment
+      // (les Reels suivants ne sont que préchargés). On renvoie SON image et SON son, jamais ceux d'une autre.
+      window.__elaraPaire = function () {
+        var liste = window.__elaraFlux, act = window.__elaraActivite, maintenant = Date.now();
+        var meilleur = '', score = -1, dernier = 0;
+        Object.keys(act).forEach(function (a) {
+          if (!liste.some(function (e) { return e.asset === a && !e.audio; })) return;
+          var n = act[a].filter(function (t) { return maintenant - t < 15000; }).length * 1000
+                + act[a].filter(function (t) { return maintenant - t < 60000; }).length;
+          var d = act[a][act[a].length - 1];
+          if (n > score || (n === score && d > dernier)) { meilleur = a; score = n; dernier = d; }
+        });
+        if (!meilleur) return [];
+        var memes = liste.filter(function (e) { return e.asset === meilleur; });
+        var image = memes.filter(function (e) { return !e.audio; }).pop();
+        var son = memes.filter(function (e) { return e.audio; }).pop();
+        return [image, son].filter(Boolean).map(function (e) { return e.url; });
+      };
       var compteur = 0;
 
       // Les Reels lisent des segments « blob: » : on note les vraies adresses des fichiers reçus.
@@ -266,11 +348,20 @@ final class NavigateurFacebook: NSObject, WKNavigationDelegate, WKUIDelegate, WK
           x.searchParams.delete('bytestart'); x.searchParams.delete('byteend');
           var tag = '';
           try { tag = atob((x.searchParams.get('efg') || '').replace(/-/g, '+').replace(/_/g, '/')); } catch (e) {}
-          var audio = /audio/i.test(tag) && !/video/i.test(tag.replace(/audio/ig, ''));
+          // L'étiquette « efg » dit si le fichier est le son ou l'image, et à quelle vidéo il appartient.
+          var code = (tag.match(/"vencode_tag"\s*:\s*"([^"]*)"/) || [])[1] || tag;
+          var audio = /audio/i.test(code);
+          var asset = (tag.match(/"xpv_asset_id"\s*:\s*"?(\d+)/) || [])[1] || '';
+          var maintenant = Date.now();
+          if (asset) {
+            var act = window.__elaraActivite[asset] || (window.__elaraActivite[asset] = []);
+            act.push(maintenant);
+            if (act.length > 200) act.shift();
+          }
           var liste = window.__elaraFlux;
           for (var i = liste.length - 1; i >= 0; i--) { if (liste[i].chemin === x.pathname) liste.splice(i, 1); }
-          liste.push({ url: x.href, chemin: x.pathname, audio: audio, t: Date.now() });
-          if (liste.length > 40) liste.shift();
+          liste.push({ url: x.href, chemin: x.pathname, audio: audio, asset: asset, t: maintenant });
+          if (liste.length > 60) liste.shift();
         } catch (e) {}
       }
       ['pushState', 'replaceState'].forEach(function (nom) {

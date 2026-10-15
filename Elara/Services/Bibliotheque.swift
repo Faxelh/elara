@@ -173,6 +173,13 @@ final class Bibliotheque {
         return total / Double(cote * cote) / 255
     }
 
+    /// Refait la miniature d'un média dont le fichier a changé (filigrane masqué, compression…).
+    func refaireMiniature(_ media: Media) async {
+        guard let actuel = self.media(id: media.id), actuel.type == .video else { return }
+        await genererMiniature(actuel, asset: AVURLAsset(url: url(de: actuel)))
+        versionMiniatures += 1
+    }
+
     /// Refait une seule fois les miniatures des vidéos déjà présentes (anciennes miniatures parfois noires).
     func rafraichirMiniatures() async {
         let cle = "miniatures.v2"
@@ -436,10 +443,13 @@ final class Bibliotheque {
         }
     }
 
+    /// Écriture sur le disque hors de l'écran principal (file d'attente en série : l'ordre est respecté).
+    private static let fileEcriture = DispatchQueue(label: "elara.bibliotheque.ecriture", qos: .utility)
+
     private func enregistrer() {
-        if let data = try? JSONEncoder().encode(tous) {
-            try? data.write(to: fichierIndex, options: .atomic)
-        }
+        guard let data = try? JSONEncoder().encode(tous) else { return }
+        let url = fichierIndex
+        Self.fileEcriture.async { try? data.write(to: url, options: .atomic) }
     }
 
     private func urlLibre(pour nom: String, dans dossier: URL) -> URL {

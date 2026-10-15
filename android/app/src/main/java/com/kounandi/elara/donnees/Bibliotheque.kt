@@ -171,6 +171,20 @@ object Bibliotheque {
 
     fun deplacer(media: Media, dossier: String?) = modifier(media.id) { it.copy(dossier = dossier) }
 
+    /** Remplace le fichier d'un média par une nouvelle version (filigrane masqué…) ; nom, dossier et position sont gardés. */
+    suspend fun remplacerFichier(media: Media, source: File): Boolean = withContext(Dispatchers.IO) {
+        val ancien = fichier(media)
+        val dest = File(ancien.parentFile, media.id + "-" + UUID.randomUUID().toString().take(6) + ".mp4")
+        val ok = source.renameTo(dest) || runCatching { source.copyTo(dest, overwrite = true); source.delete(); true }.getOrDefault(false)
+        if (!ok) return@withContext false
+        ancien.delete()
+        miniature(media).delete()
+        withContext(Dispatchers.Main) {
+            modifier(media.id) { it.copy(fichier = dest.name, taille = dest.length(), empreinte = empreinte(dest)) }
+        }
+        true
+    }
+
     fun memoriserPosition(id: String, position: Long) {
         val actuel = media(id) ?: return
         if (actuel.position == position) return

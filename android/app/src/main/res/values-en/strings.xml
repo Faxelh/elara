@@ -4,9 +4,12 @@
     <string name="accueil_racine">Home (no folder)</string>
     <string name="accueil_youtube">YouTube home</string>
     <string name="actions">Actions</string>
+    <string name="aide_effacer">Erase: the area is rebuilt from the surrounding colors, no blur. Place the box right on the watermark (resize with the dot).</string>
+    <string name="aide_recadrer">Crop: the strip containing the watermark is cut off (dark area). No trace; the picture gets slightly smaller.</string>
     <string name="aide_telecharger">Paste a direct link to a video or audio file (mp4, mov, mp3, m4a…) or a Facebook video link. Tip: in the Facebook tab, play a video, then tap “Download”.</string>
     <string name="ajoute_a_elara">Added to Elara: %s</string>
     <string name="ajouter">Add</string>
+    <string name="ajouter_zone">+ Zone</string>
     <string name="ajuster_ecran">Fit to screen</string>
     <string name="annuler">Cancel</string>
     <string name="app_name">Elara</string>
@@ -24,6 +27,11 @@
     <string name="code_faux">Wrong code</string>
     <string name="code_longueur">4 to 8 digits</string>
     <string name="codes_differents">The codes don\'t match. Try again.</string>
+    <string name="coin_bas_centre">Bottom center</string>
+    <string name="coin_bas_droite">Bottom right</string>
+    <string name="coin_bas_gauche">Bottom left</string>
+    <string name="coin_haut_droite">Top right</string>
+    <string name="coin_haut_gauche">Top left</string>
     <string name="coller_lien">Paste link</string>
     <string name="coller_lien_tiktok">Paste a TikTok link</string>
     <string name="confirmer_code">Confirm the code</string>
@@ -39,6 +47,7 @@
     <string name="dessiner_schema">Draw your pattern</string>
     <string name="deverrouiller_ecran">Unlock screen</string>
     <string name="doublons_supprimes">%d duplicate(s) removed.</string>
+    <string name="effacer">Erase</string>
     <string name="empreinte_visage">Fingerprint / face</string>
     <string name="enregistrer_galerie">Save</string>
     <string name="enregistrer_image_question">Save it to the gallery?</string>
@@ -53,12 +62,18 @@
     <string name="erreur_pas_media">This link isn\'t a supported video or audio file (mp4, mov, mp3, m4a…).</string>
     <string name="erreur_plateforme">Elara doesn\'t download from streaming platforms or other social networks. Use a direct link to a video or audio file.</string>
     <string name="erreur_serveur">The server responded with error %d.</string>
+    <string name="erreur_x_introuvable">This X post can\'t be found or is private.</string>
+    <string name="erreur_x_sans_video">This X post has no video.</string>
     <string name="etirer">Stretch</string>
     <string name="fermer">Close</string>
     <string name="fermer_lecteur">Close player</string>
     <string name="fichiers">Files</string>
     <string name="fil_actualite">News feed</string>
+    <string name="filigrane">Watermark</string>
+    <string name="filigrane_aide">Drag the box over the watermark and resize it with the dot. Add a zone if the watermark moves during the video.</string>
+    <string name="filigrane_termine">Watermark hidden on %d video(s).</string>
     <string name="fin_video">At the end of the video</string>
+    <string name="garder_original">Also keep the original</string>
     <string name="geste_luminosite">Brightness (swipe left side)</string>
     <string name="geste_volume">Volume (swipe right side)</string>
     <string name="image">Image</string>
@@ -77,6 +92,8 @@
     <string name="maj_disponible">Update available</string>
     <string name="maj_erreur">Couldn\'t check or download the update. Check your connection.</string>
     <string name="maj_texte">Elara %1$s is available (you have %2$s).</string>
+    <string name="masquer_filigrane">Hide watermark</string>
+    <string name="masquer_sur_n">Hide on %d videos</string>
     <string name="methode_code">Code</string>
     <string name="methode_code_texte">4 to 8 digits</string>
     <string name="methode_schema">Pattern</string>
@@ -104,6 +121,7 @@
     <string name="plein_ecran">Full screen</string>
     <string name="plus_options">More options</string>
     <string name="plus_tard">Later</string>
+    <string name="position">Position</string>
     <string name="position_file">%1$d of %2$d</string>
     <string name="precedent">Previous</string>
     <string name="prive">Private</string>
@@ -111,6 +129,7 @@
     <string name="proteger_prive_texte">Choose how to open your private videos.</string>
     <string name="quitter_plein_ecran">Exit full screen</string>
     <string name="ranger_prive">Save to private folder</string>
+    <string name="recadrer">Crop</string>
     <string name="recharger">Reload</string>
     <string name="recherche_video">Finding the video…</string>
     <string name="rechercher_maj">Check for updates</string>
@@ -120,7 +139,10 @@
     <string name="renommer">Rename</string>
     <string name="repeter_video">Repeat this video</string>
     <string name="reprendre_lecture">Resume where I left off</string>
+    <string name="retirer">Remove</string>
+    <string name="retirer_filigrane">Remove watermark</string>
     <string name="retirer_prive">Remove from Private</string>
+    <string name="retirer_sur_n">Remove on %d videos</string>
     <string name="retour">Back</string>
     <string name="saisir_code">Enter your code</string>
     <string name="schema_faux">Wrong pattern</string>
@@ -172,6 +194,7 @@
     <string name="vide_prive">The private folder is empty. Tap + to add videos.</string>
     <string name="video_ajoutee">Video added to Elara</string>
     <string name="video_en_lecture">Video playing</string>
+    <string name="video_n_sur">Video %1$d of %2$d…</string>
     <string name="videos">Videos</string>
     <string name="vitesse">Speed</string>
     <plurals name="elements">

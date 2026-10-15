@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import JavaScriptCore
 import Observation
 
 /// Télécharge un fichier vidéo ou audio depuis un lien direct (http/https).
@@ -43,10 +44,12 @@ final class Telechargeur {
         var nomForce: String?
         #if PERSO
         let estFacebook = ExtracteurFacebook.gere(hote)
+        let numeroX = Self.estX(hote) ? Self.numeroX(propre) : nil
         #else
         let estFacebook = false
+        let numeroX: String? = nil
         #endif
-        if !estFacebook, Self.domainesRefuses.contains(where: { hote == $0 || hote.hasSuffix("." + $0) }) {
+        if !estFacebook, numeroX == nil, Self.domainesRefuses.contains(where: { hote == $0 || hote.hasSuffix("." + $0) }) {
             erreur = String(localized: "Elara ne télécharge pas depuis les réseaux sociaux ni les plateformes de streaming. Utilisez un lien direct vers un fichier vidéo ou audio.")
             return nil
         }
@@ -63,7 +66,12 @@ final class Telechargeur {
         do {
             var url = url
             #if PERSO
-            if estFacebook {
+            if let numeroX {
+                recherche = true
+                url = try await Self.lienVideoX(numero: numeroX)
+                recherche = false
+                nomForce = Self.nomDate("X") + ".mp4"
+            } else if estFacebook {
                 recherche = true
                 url = try await ExtracteurFacebook.lienVideo(depuis: url)
                 recherche = false
@@ -129,8 +137,61 @@ final class Telechargeur {
     }
 
     #if PERSO
-    /// Vidéo TikTok (onglet Réseaux) : le fichier demande la connexion TikTok et la page d'origine.
-    func telechargerTikTok(_ lien: URL, cookies: String, vers bib: Bibliotheque, prive: Bool) async -> Media? {
+    /// Numéro du post X (Twitter) dans un lien x.com/…/status/123.
+    static func numeroX(_ texte: String) -> String? {
+        guard let r = texte.range(of: #"(?:x|twitter)\.com/[^/?#]+/status(?:es)?/(\d+)"#, options: .regularExpression) else { return nil }
+        return texte[r].split(separator: "/").last.map { String($0.prefix { $0.isNumber }) }
+    }
+
+    static func estX(_ hote: String) -> Bool {
+        ["x.com", "twitter.com", "mobile.twitter.com", "mobile.x.com", "www.x.com", "www.twitter.com"].contains(hote)
+    }
+
+    /// Fichier mp4 (meilleure qualité) de la vidéo d'un post X, via le service public d'intégration des posts.
+    static func lienVideoX(numero: String) async throws -> URL {
+        // Jeton exigé par le service : même calcul que les intégrations officielles (fait en JavaScript, pour être exact).
+        let contexte = JSContext()
+        let jeton = contexte?.evaluateScript("((Number('\(numero)') / 1e15) * Math.PI).toString(36).replace(/(0+|\\.)/g, '')")?.toString() ?? "a"
+        guard let url = URL(string: "https://cdn.syndication.twimg.com/tweet-result?id=\(numero)&lang=fr&token=\(jeton)") else {
+            throw ErreurTelechargement(message: String(localized: "Lien X invalide."))
+        }
+        var requete = URLRequest(url: url, timeoutInterval: 20)
+        requete.setValue(ExtracteurFacebook.agentMobile, forHTTPHeaderField: "User-Agent")
+        let (donnees, reponse) = try await URLSession.shared.data(for: requete)
+        guard (reponse as? HTTPURLResponse)?.statusCode == 200,
+              let racine = try? JSONSerialization.jsonObject(with: donnees) as? [String: Any] else {
+            throw ErreurTelechargement(message: String(localized: "Ce post X est introuvable ou privé."))
+        }
+        var variantes: [(URL, Int)] = []
+        func lire(_ liste: [[String: Any]]?) {
+            for v in liste ?? [] {
+                let type = (v["content_type"] ?? v["type"]) as? String ?? ""
+                guard type.contains("mp4"), let texte = (v["url"] ?? v["src"]) as? String, let u = URL(string: texte) else { continue }
+                var debit = (v["bitrate"] as? Int) ?? 0
+                if debit == 0, let r = texte.range(of: #"/(\d+)x(\d+)/"#, options: .regularExpression) {
+                    let dims = texte[r].split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+                    debit = dims.reduce(1, *)
+                }
+                variantes.append((u, debit))
+            }
+        }
+        for m in (racine["mediaDetails"] as? [[String: Any]]) ?? [] {
+            lire((m["video_info"] as? [String: Any])?["variants"] as? [[String: Any]])
+        }
+        lire((racine["video"] as? [String: Any])?["variants"] as? [[String: Any]])
+        if let cite = racine["quoted_tweet"] as? [String: Any], variantes.isEmpty {
+            for m in (cite["mediaDetails"] as? [[String: Any]]) ?? [] {
+                lire((m["video_info"] as? [String: Any])?["variants"] as? [[String: Any]])
+            }
+        }
+        guard let meilleure = variantes.max(by: { $0.1 < $1.1 })?.0 else {
+            throw ErreurTelechargement(message: String(localized: "Ce post X ne contient pas de vidéo."))
+        }
+        return meilleure
+    }
+
+    /// Vidéo d'un post X (onglet Réseaux) : par son numéro, sinon le fichier vu pendant la lecture.
+    func telechargerX(numero: String?, secours: URL?, vers bib: Bibliotheque, prive: Bool) async -> Media? {
         erreur = nil
         annule = false
         enCours = true
@@ -138,17 +199,17 @@ final class Telechargeur {
         octetsRecus = 0
         defer { enCours = false; recherche = false; tache = nil }
         do {
-            let entetes = [
-                "Referer": "https://www.tiktok.com/",
-                "Origin": "https://www.tiktok.com",
-                "Cookie": cookies,
-                "User-Agent": ExtracteurFacebook.agentMobile,
-                "Range": "bytes=0-",
-            ]
-            let recu = try await telechargerBrut(lien, entetes: entetes)
-            let format = DateFormatter()
-            format.dateFormat = "yyyy-MM-dd HH'h'mm"
-            let fichier = recu.deletingLastPathComponent().appendingPathComponent("TikTok " + format.string(from: Date()) + ".mp4")
+            var lien = secours
+            if let numero {
+                recherche = true
+                if let trouve = try? await Self.lienVideoX(numero: numero) { lien = trouve }
+                recherche = false
+            }
+            guard let lien else {
+                throw ErreurTelechargement(message: String(localized: "Impossible de trouver le fichier de cette vidéo. Ouvrez le post, lancez la vidéo puis réessayez."))
+            }
+            let recu = try await telechargerBrut(lien, entetes: ["Referer": "https://x.com/", "User-Agent": ExtracteurFacebook.agentMobile])
+            let fichier = recu.deletingLastPathComponent().appendingPathComponent(Self.nomDate("X") + ".mp4")
             try? FileManager.default.removeItem(at: fichier)
             try FileManager.default.moveItem(at: recu, to: fichier)
             guard let media = await bib.importer(depuis: fichier, deplacer: true, prive: prive) else {
@@ -164,6 +225,12 @@ final class Telechargeur {
             erreur = String(localized: "Le téléchargement a échoué : \(error.localizedDescription)")
         }
         return nil
+    }
+
+    static func nomDate(_ prefixe: String) -> String {
+        let format = DateFormatter()
+        format.dateFormat = "yyyy-MM-dd HH'h'mm"
+        return prefixe + " " + format.string(from: Date())
     }
 
     /// Reels : l'image et le son sont souvent deux fichiers. On télécharge les derniers fichiers vus,

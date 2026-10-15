@@ -17,6 +17,7 @@ struct ListeMedias: View {
     @State private var confirmerSuppression = false
     @State private var enregistrement = false
     @State private var message: String?
+    @State private var aMasquer: [Media]?
 
     private let colonnes = [GridItem(.adaptive(minimum: 105), spacing: 12)]
 
@@ -99,6 +100,19 @@ struct ListeMedias: View {
         .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("OK", role: .cancel) {}
         }
+        .sheet(isPresented: Binding(get: { aMasquer != nil }, set: { if !$0 { aMasquer = nil } })) {
+            if let liste = aMasquer { FiligraneView(medias: liste) }
+        }
+    }
+
+    private func masquerFiligrane(_ choix: [Media]) {
+        let videos = choix.filter { $0.type == .video }
+        guard !videos.isEmpty else {
+            message = String(localized: "Choisissez au moins une vidéo.")
+            return
+        }
+        aMasquer = videos
+        if enSelection { quitterSelection() }
     }
 
     // MARK: - Sélection
@@ -192,6 +206,13 @@ struct ListeMedias: View {
         }
         .disabled(aucun)
         Spacer()
+        Button {
+            masquerFiligrane(selectionnes)
+        } label: {
+            Label("Filigrane", systemImage: "eye.slash")
+        }
+        .disabled(aucun)
+        Spacer()
         Button(role: .destructive) {
             confirmerSuppression = true
         } label: {
@@ -241,6 +262,7 @@ struct ListeMedias: View {
             Button("Enregistrer dans Photos", systemImage: "square.and.arrow.down") {
                 Task { await enregistrerDansPhotos([media]) }
             }
+            Button("Retirer un filigrane", systemImage: "eye.slash") { masquerFiligrane([media]) }
         }
         ShareLink(item: bib.url(de: media)) {
             Label("Partager", systemImage: "square.and.arrow.up")
@@ -258,18 +280,7 @@ struct LigneMedia: View {
         HStack(spacing: 12) {
             Color.clear
                 .frame(width: 72, height: 54)
-                .overlay {
-                    if media.type == .video,
-                       let image = UIImage(contentsOfFile: bib.urlMiniature(de: media).path) {
-                        Image(uiImage: image).resizable().scaledToFill()
-                    } else {
-                        ZStack {
-                            Theme.degrade
-                            Image(systemName: media.type == .audio ? "music.note" : "film")
-                                .foregroundStyle(.white)
-                        }
-                    }
-                }
+                .overlay { ImageMiniature(media: media, iconeTaille: .body) }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {

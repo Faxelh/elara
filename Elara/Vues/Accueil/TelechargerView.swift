@@ -36,7 +36,7 @@ struct TelechargerView: View {
                     Text("Lien du fichier")
                 } footer: {
                     if Telechargeur.gereFacebook {
-                        Text("Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook. Astuce : dans l'onglet Facebook, lancez une vidéo puis touchez « Télécharger ».")
+                        Text("Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…) ou le lien d'une vidéo Facebook ou d'un post X (Twitter). Astuce : dans l'onglet Réseaux, lancez une vidéo puis touchez « Télécharger ».")
                     } else {
                         Text("Collez un lien direct vers un fichier vidéo ou audio (mp4, mov, mp3, m4a…). Les liens YouTube, TikTok, Instagram, Facebook et autres plateformes ne sont pas pris en charge.")
                     }

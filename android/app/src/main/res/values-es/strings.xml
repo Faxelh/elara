@@ -4,9 +4,12 @@
     <string name="accueil_racine">Inicio (sin carpeta)</string>
     <string name="accueil_youtube">Inicio de YouTube</string>
     <string name="actions">Acciones</string>
+    <string name="aide_effacer">Borrar: la zona se reconstruye con los colores de alrededor, sin desenfoque. Coloca el recuadro justo sobre la marca.</string>
+    <string name="aide_recadrer">Recortar: se corta la franja con la marca (zona oscura). Sin rastro; la imagen queda algo más pequeña.</string>
     <string name="aide_telecharger">Pega un enlace directo a un archivo de vídeo o audio (mp4, mov, mp3, m4a…) o el enlace de un vídeo de Facebook. Consejo: en la pestaña Facebook, reproduce un vídeo y toca «Descargar».</string>
     <string name="ajoute_a_elara">Añadido a Elara: %s</string>
     <string name="ajouter">Añadir</string>
+    <string name="ajouter_zone">+ Zona</string>
     <string name="ajuster_ecran">Ajustar a pantalla</string>
     <string name="annuler">Cancelar</string>
     <string name="app_name">Elara</string>
@@ -24,6 +27,11 @@
     <string name="code_faux">Código incorrecto</string>
     <string name="code_longueur">De 4 a 8 cifras</string>
     <string name="codes_differents">Los códigos no coinciden. Inténtalo de nuevo.</string>
+    <string name="coin_bas_centre">Abajo en el centro</string>
+    <string name="coin_bas_droite">Abajo a la derecha</string>
+    <string name="coin_bas_gauche">Abajo a la izquierda</string>
+    <string name="coin_haut_droite">Arriba a la derecha</string>
+    <string name="coin_haut_gauche">Arriba a la izquierda</string>
     <string name="coller_lien">Pegar enlace</string>
     <string name="coller_lien_tiktok">Pegar un enlace de TikTok</string>
     <string name="confirmer_code">Confirma el código</string>
@@ -39,6 +47,7 @@
     <string name="dessiner_schema">Dibuja tu patrón</string>
     <string name="deverrouiller_ecran">Desbloquear pantalla</string>
     <string name="doublons_supprimes">%d duplicado(s) eliminado(s).</string>
+    <string name="effacer">Borrar</string>
     <string name="empreinte_visage">Huella / rostro</string>
     <string name="enregistrer_galerie">Guardar</string>
     <string name="enregistrer_image_question">¿Guardarla en la galería?</string>
@@ -53,12 +62,18 @@
     <string name="erreur_pas_media">Este enlace no apunta a un vídeo o audio compatible (mp4, mov, mp3, m4a…).</string>
     <string name="erreur_plateforme">Elara no descarga de plataformas de streaming ni de otras redes sociales. Usa un enlace directo a un archivo de vídeo o audio.</string>
     <string name="erreur_serveur">El servidor respondió con el error %d.</string>
+    <string name="erreur_x_introuvable">Esta publicación de X no existe o es privada.</string>
+    <string name="erreur_x_sans_video">Esta publicación de X no tiene vídeo.</string>
     <string name="etirer">Estirar</string>
     <string name="fermer">Cerrar</string>
     <string name="fermer_lecteur">Cerrar reproductor</string>
     <string name="fichiers">Archivos</string>
     <string name="fil_actualite">Noticias</string>
+    <string name="filigrane">Marca de agua</string>
+    <string name="filigrane_aide">Arrastra el recuadro sobre la marca de agua y cambia su tamaño con el punto. Añade una zona si la marca se mueve.</string>
+    <string name="filigrane_termine">Marca de agua oculta en %d vídeo(s).</string>
     <string name="fin_video">Al final del vídeo</string>
+    <string name="garder_original">Conservar también el original</string>
     <string name="geste_luminosite">Brillo (deslizar a la izquierda)</string>
     <string name="geste_volume">Volumen (deslizar a la derecha)</string>
     <string name="image">Imagen</string>
@@ -77,6 +92,8 @@
     <string name="maj_disponible">Nueva versión disponible</string>
     <string name="maj_erreur">No se pudo comprobar o descargar la actualización. Revisa la conexión.</string>
     <string name="maj_texte">Elara %1$s está disponible (tienes la %2$s).</string>
+    <string name="masquer_filigrane">Ocultar marca de agua</string>
+    <string name="masquer_sur_n">Ocultar en %d vídeos</string>
     <string name="methode_code">Código</string>
     <string name="methode_code_texte">De 4 a 8 cifras</string>
     <string name="methode_schema">Patrón</string>
@@ -104,6 +121,7 @@
     <string name="plein_ecran">Pantalla completa</string>
     <string name="plus_options">Más opciones</string>
     <string name="plus_tard">Más tarde</string>
+    <string name="position">Posición</string>
     <string name="position_file">%1$d de %2$d</string>
     <string name="precedent">Anterior</string>
     <string name="prive">Privado</string>
@@ -111,6 +129,7 @@
     <string name="proteger_prive_texte">Elige cómo abrir tus vídeos privados.</string>
     <string name="quitter_plein_ecran">Salir de pantalla completa</string>
     <string name="ranger_prive">Guardar en la carpeta privada</string>
+    <string name="recadrer">Recortar</string>
     <string name="recharger">Recargar</string>
     <string name="recherche_video">Buscando el vídeo…</string>
     <string name="rechercher_maj">Buscar actualizaciones</string>
@@ -120,7 +139,10 @@
     <string name="renommer">Renombrar</string>
     <string name="repeter_video">Repetir este vídeo</string>
     <string name="reprendre_lecture">Reanudar donde lo dejé</string>
+    <string name="retirer">Quitar</string>
+    <string name="retirer_filigrane">Quitar marca de agua</string>
     <string name="retirer_prive">Quitar de Privado</string>
+    <string name="retirer_sur_n">Quitar en %d vídeos</string>
     <string name="retour">Atrás</string>
     <string name="saisir_code">Introduce tu código</string>
     <string name="schema_faux">Patrón incorrecto</string>
@@ -172,6 +194,7 @@
     <string name="vide_prive">La carpeta privada está vacía. Toca + para añadir vídeos.</string>
     <string name="video_ajoutee">Vídeo añadido a Elara</string>
     <string name="video_en_lecture">Vídeo en reproducción</string>
+    <string name="video_n_sur">Vídeo %1$d de %2$d…</string>
     <string name="videos">Vídeos</string>
     <string name="vitesse">Velocidad</string>
     <plurals name="elements">

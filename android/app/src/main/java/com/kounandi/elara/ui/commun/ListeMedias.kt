@@ -229,13 +229,18 @@ fun LigneMedia(
     }
 }
 
+/** Miniatures déjà décodées, gardées en mémoire : le défilement reste fluide. */
+private val cacheMiniatures = android.util.LruCache<String, ImageBitmap>(300)
+
 @Composable
 fun Miniature(media: Media, modifier: Modifier) {
-    var image by remember(media.id) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(media.id) {
+    val cle = media.id + "/" + media.fichier
+    var image by remember(cle) { mutableStateOf<ImageBitmap?>(cacheMiniatures.get(cle)) }
+    LaunchedEffect(cle) {
+        if (image != null) return@LaunchedEffect
         image = withContext(Dispatchers.IO) {
             Bibliotheque.miniature(media)?.let { f -> BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap() }
-        }
+        }?.also { cacheMiniatures.put(cle, it) }
     }
     Box(
         modifier
