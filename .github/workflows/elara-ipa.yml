@@ -43,6 +43,11 @@ jobs:
           # même si le dépôt est recréé (sinon Elara croit être déjà à jour).
           echo "ELARA_BUILD=$(( $(date -u +%s) / 60 ))" >> "$GITHUB_ENV"
           echo "Version : $BASE.$N"
+          # Nom affiché sous l'icône : contenu du fichier NOM (modifiable sur GitHub à tout moment).
+          NOM=$(head -n 1 "$GITHUB_WORKSPACE/NOM" 2>/dev/null | tr -d '\r' | sed 's/^ *//;s/ *$//')
+          [ -z "$NOM" ] && NOM="Elara"
+          echo "ELARA_NOM=$NOM" >> "$GITHUB_ENV"
+          echo "Nom : $NOM"
 
       - name: Préparer les outils
         run: |
@@ -70,7 +75,8 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             SWIFT_ACTIVE_COMPILATION_CONDITIONS=PERSO \
             CURRENT_PROJECT_VERSION=$ELARA_BUILD \
-            MARKETING_VERSION=$ELARA_VERSION > build/xcodebuild.log 2>&1
+            MARKETING_VERSION=$ELARA_VERSION \
+            ELARA_NOM="$ELARA_NOM" > build/xcodebuild.log 2>&1
           statut=$?
           set -e
           grep -E "error:|\*\* BUILD" build/xcodebuild.log || true
