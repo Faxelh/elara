@@ -246,13 +246,15 @@ object NavigateurFacebook {
             ))
     }
 
-    /** Image + son de LA vidéo en cours (même asset) — jamais le son d'une autre vidéo. */
-    private fun paireActuelle(): List<String>? = synchronized(flux) {
-        val asset = assetActuel() ?: return null
+    /** Image + son d'une vidéo (même asset) — jamais le son d'une autre vidéo. */
+    private fun paire(asset: String): List<String>? = synchronized(flux) {
         val memes = flux.filter { it.asset == asset }
         val image = memes.lastOrNull { !it.audio } ?: return null
         listOfNotNull(image.url, memes.lastOrNull { it.audio }?.url)
     }
+
+    /** Image + son de LA vidéo en cours de lecture. */
+    private fun paireActuelle(): List<String>? = synchronized(flux) { assetActuel()?.let { paire(it) } }
 
     /** Derniers fichiers vus sans étiquette de vidéo (si Facebook n'en donne pas), le plus récent d'abord. */
     private fun candidats(): List<String> = synchronized(flux) {
@@ -268,21 +270,32 @@ object NavigateurFacebook {
 
     // MARK: Recherche du fichier
 
-    suspend fun source(detectee: VideoDetectee?): SourceFacebook? {
-        // Le plus fiable : l'image et le son de la vidéo en train de jouer, vus passer sur le réseau.
-        paireActuelle()?.let { return SourceFacebook.Flux(it) }
-        val cible = detectee ?: videoVisible() ?: return candidats().takeIf { it.isNotEmpty() }?.let { SourceFacebook.Flux(it) }
-        if (cible.source.startsWith("https://")) return SourceFacebook.Direct(cible.source)
-        for (texte in listOf(cible.page, cible.lien)) {
-            val id = numeroVideo(texte) ?: continue
-            lienConnu(id)?.let { return SourceFacebook.Direct(it) }
+    /**
+     * Sources possibles pour la vidéo choisie, de la plus sûre à la moins sûre.
+     * On essaie chacune tant que le téléchargement échoue.
+     */
+    suspend fun sources(detectee: VideoDetectee?): List<SourceFacebook> {
+        val liste = mutableListOf<SourceFacebook>()
+        fun ajoute(s: SourceFacebook?) { if (s != null && s !in liste) liste += s }
+        val cible = detectee ?: videoVisible()
+        // 1. La vidéo choisie, reconnue par son numéro (flux vus passer, puis lien connu de la page).
+        val ids = listOfNotNull(cible?.page, cible?.lien).mapNotNull { numeroVideo(it) }.distinct()
+        for (id in ids) paire(id)?.let { ajoute(SourceFacebook.Flux(it)) }
+        for (id in ids) lienConnu(id)?.let { ajoute(SourceFacebook.Direct(it)) }
+        // 2. Lien direct donné par le lecteur de la page.
+        if (cible != null && cible.source.startsWith("https://")) ajoute(SourceFacebook.Direct(cible.source))
+        // 3. La vidéo en train de jouer (image + son vus passer sur le réseau).
+        paireActuelle()?.let { ajoute(SourceFacebook.Flux(it)) }
+        candidats().takeIf { it.isNotEmpty() }?.let { ajoute(SourceFacebook.Flux(it)) }
+        // 4. Lecture de la page de la vidéo.
+        if (cible != null) {
+            for (texte in listOf(cible.lien, cible.page)) {
+                if (estPageVideo(texte)) runCatching { ExtracteurFacebook.lienVideo(texte) }.getOrNull()
+                    ?.let { ajoute(SourceFacebook.Direct(it)) }
+            }
         }
-        candidats().takeIf { it.isNotEmpty() }?.let { return SourceFacebook.Flux(it) }
-        for (texte in listOf(cible.lien, cible.page)) {
-            if (estPageVideo(texte)) ExtracteurFacebook.lienVideo(texte)?.let { return SourceFacebook.Direct(it) }
-        }
-        lienUnique()?.let { return SourceFacebook.Direct(it) }
-        return null
+        lienUnique()?.let { ajoute(SourceFacebook.Direct(it)) }
+        return liste
     }
 
     private suspend fun evaluer(js: String): String? {

@@ -1,3 +1,7 @@
+# 16 octobre 2026
+- Android : Facebook télécharge bien la vidéo choisie (reconnue par son numéro), et si une méthode échoue, Elara essaie automatiquement les autres.
+- Android : vidéos Facebook illisibles (« container malformé ») corrigées.
+
 # 15 octobre 2026
 - Android : vidéos Facebook téléchargées illisibles (« container malformé ») corrigées : l'image et le son sont désormais assemblés par Media3 (réencodage en H.264 si besoin) ; un fichier abîmé ou coupé n'est plus ajouté.
 - Android : lecture plus robuste (autre décodeur si besoin, nouvelle tentative automatique) et message clair en cas d'échec.

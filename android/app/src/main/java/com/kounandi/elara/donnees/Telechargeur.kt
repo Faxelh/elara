@@ -37,7 +37,8 @@ object Telechargeur {
     var progression by mutableFloatStateOf(0f); private set
     var octets by mutableLongStateOf(0L); private set
 
-    @Volatile private var annule = false
+    @Volatile var annule = false
+        private set
 
     const val AGENT_MOBILE = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36"
     const val AGENT_ORDINATEUR = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"

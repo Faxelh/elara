@@ -146,12 +146,27 @@ fun FacebookEcran(marges: PaddingValues, pleinEcran: Boolean, changerPleinEcran:
         NavigateurFacebook.video = null
         scope.launch {
             try {
-                val source = NavigateurFacebook.source(video)
-                    ?: throw Exception(contexte.getString(R.string.erreur_introuvable))
-                val media = when (source) {
-                    is SourceFacebook.Direct -> Telechargeur.telecharger(contexte, source.lien, false, NavigateurFacebook.sonsRecents())
-                    is SourceFacebook.Flux -> Telechargeur.telechargerFlux(contexte, source.liens, false)
+                val sources = NavigateurFacebook.sources(video)
+                if (sources.isEmpty()) throw Exception(contexte.getString(R.string.erreur_introuvable))
+                // On essaie chaque source possible jusqu'à ce qu'une donne une vidéo lisible.
+                var media: com.kounandi.elara.donnees.Media? = null
+                var derniere: Exception? = null
+                for (source in sources) {
+                    if (Telechargeur.annule) break
+                    media = try {
+                        when (source) {
+                            is SourceFacebook.Direct -> Telechargeur.telecharger(contexte, source.lien, false, NavigateurFacebook.sonsRecents())
+                            is SourceFacebook.Flux -> Telechargeur.telechargerFlux(contexte, source.liens, false)
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        derniere = e
+                        null
+                    }
+                    if (media != null) break
                 }
+                if (media == null) throw derniere ?: Exception(contexte.getString(R.string.erreur_introuvable))
                 NavigateurFacebook.marquerTelechargee(video)
                 ajoute = media
                 // Le bandeau « Vidéo ajoutée » se ferme tout seul.
