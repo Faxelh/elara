@@ -57,7 +57,7 @@ Développeur autodidacte, je crée des applications utiles pour mon quotidien et
 ## 🚀 Mes projets
 | Projet | Description |
 |---|---|
-| [**Faxel**](https://github.com/Faxelh/Faxel) | axel est une application pour iPhone et Android qui réunit un navigateur avec téléchargement intégré, un lecteur vidéo/audio et une bibliothèque pour ranger ses fichiers, le tout en français. Un seul dépôt sert les deux plateforme |
+| [**Faxel**](https://github.com/Faxelh/Faxel) | Faxel est une application pour iPhone et Android qui réunit un navigateur avec téléchargement intégré, un lecteur vidéo/audio et une bibliothèque pour ranger ses fichiers, le tout en français. Un seul dépôt sert les deux plateforme |
 | [**Music**](https://github.com/Faxelh/Music) | Outil pour organiser et renuméroter ses fichiers musicaux |
 
 ## 🛠️ Technologies
