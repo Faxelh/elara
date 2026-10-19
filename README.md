@@ -58,7 +58,7 @@ Développeur autodidacte, je crée des applications utiles pour mon quotidien et
 | Projet | Description |
 |---|---|
 | [**Faxel**](https://github.com/Faxelh/Faxel) | Faxel est une application pour iPhone et Android qui réunit un navigateur avec téléchargement intégré, un lecteur vidéo/audio et une bibliothèque pour ranger ses fichiers, le tout en français. Un seul dépôt sert les deux plateforme |
-| [**Music**](https://github.com/Faxelh/Music) | Outil pour organiser et renuméroter ses fichiers musicaux |
+| [**Music**](https://github.com/Faxelh/Music) | **Music** est un lecteur de musique pour **iPhone et Android**, en français : bibliothèque, lecteur complet, égaliseur, paroles, playlists et mix automatiques. Un seul dépôt sert les deux plateformes.|
 
 ## 🛠️ Technologies
 ![Swift](https://img.shields.io/badge/Swift-FA7343?style=flat&logo=swift&logoColor=white)
