@@ -52,6 +52,7 @@ Français · English · Русский · Español
 
 ## 👤 Auteur
 Créé par **Faxel Kwadio** — [@Faxelh](https://github.com/Faxelh)
+Développeur autodidacte, je crée des applications utiles pour mon quotidien et celui des autres.
 
 ## 🚀 Mes projets
 | Projet | Description |
