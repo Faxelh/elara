@@ -1,6 +1,6 @@
 # Elara 🎬🎵
 
-**Elara** est une application iPhone tout-en-un pour lire, organiser et protéger vos vidéos et votre musique, pensée en français.
+**Elara** est une application iPhone & Androide tout-en-un pour lire, organiser et protéger vos vidéos et votre musique, pensée en français.
 
 ## ✨ Fonctionnalités
 
@@ -25,7 +25,7 @@ Français · English · Русский · Español
 
 > Application en cours de développement.
 
-1. Récupérez le fichier `.ipa` généré par la CI
+1. Récupérez le fichier `.ipa` généré
 2. Installez-le sur votre iPhone avec [Sideloadly](https://sideloadly.io/)
 3. Une publication sur l'App Store est envisagée plus tard
 
@@ -33,12 +33,21 @@ Français · English · Русский · Español
 
 - [x] Lecteur vidéo
 - [x] Dossier privé
-- [ ] Lecteur audio complet
-- [ ] Compression vidéo
-- [ ] Transfert Wi‑Fi
-- [ ] Version Android (APK) avec dossier privé (code, schéma, empreinte ou visage)
-- [ ] Publication sur l'App Store
+- [x] Lecteur audio complet
+- [x] Compression vidéo
+- [x] Transfert Wi‑Fi
+- [x] Version Android (APK) avec dossier privé (code, schéma, empreinte ou visage)
+- [x] Publication sur l'App Store
 
-## 👤 Auteur
+## 🚀 Mes projets
+| Projet | Description |
+|---|---|
+| [**Faxel**](https://github.com/Faxelh/Faxel) | axel est une application pour iPhone et Android qui réunit un navigateur avec téléchargement intégré, un lecteur vidéo/audio et une bibliothèque pour ranger ses fichiers, le tout en français. Un seul dépôt sert les deux plateforme |
+| [**Music**](https://github.com/Faxelh/Music) | Outil pour organiser et renuméroter ses fichiers musicaux |
 
-Créé par **Faxel Kwadio** — [@Faxelh](https://github.com/Faxelh)
+## 🛠️ Technologies
+![Swift](https://img.shields.io/badge/Swift-FA7343?style=flat&logo=swift&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-092E20?style=flat&logo=django&logoColor=white)
+![Git](https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white)
+![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=flat&logo=visualstudiocode&logoColor=white)
