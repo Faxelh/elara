@@ -1,51 +1,44 @@
-# Elara
+# Elara 🎬🎵
 
-Lecteur vidéo et audio pour iPhone, entièrement en français (SwiftUI, iOS 17+).
+**Elara** est une application iPhone tout-en-un pour lire, organiser et protéger vos vidéos et votre musique, pensée en français.
 
-## Étape 1 (cette version)
-- 4 onglets : Accueil, Transfert, Compresser, Réglages
-- Import de vidéos depuis **Photos** et de vidéos/musiques depuis **Fichiers**
-- Les fichiers déposés dans le dossier « Elara » de l'app Fichiers apparaissent aussi (tirer vers le bas pour actualiser)
-- Lecteur vidéo natif : AirPlay, image dans l'image
-- Lecteur audio : lecture en arrière-plan, commandes sur l'écran verrouillé
-- Lecture automatique (arrêter, répéter, suivant, boucle, retour à la liste) et reprise de la lecture
-- Historique, vider le cache, noter l'app, à propos
-- Renommer, partager, supprimer (appui long sur un média)
+## ✨ Fonctionnalités
 
-## Étape 2
-- **Dossier privé** protégé par Face ID (ou Touch ID / code de l'iPhone)
-- Les médias privés sont invisibles dans l'accueil, l'historique et l'app Fichiers, et chiffrés quand l'iPhone est verrouillé
-- « Déplacer vers Privé » par appui long sur un média, ou import direct dans le dossier privé
-- Verrouillage automatique quand on quitte l'app, contenu masqué dans le sélecteur d'apps
+- 🎬 **Lecteur vidéo** : lisez les vidéos de l'app Photos et de l'app Fichiers
+- 🎵 **Lecteur audio** : écoutez votre musique avec une interface simple
+- 🔒 **Dossier privé** : vos fichiers sensibles protégés par Face ID
+- 🗜️ **Compression vidéo** : réduisez la taille de vos vidéos
+- 📶 **Transfert Wi‑Fi** : envoyez des fichiers depuis votre ordinateur vers l'app
+- ⬇️ **Téléchargeur intégré** : récupérez des fichiers directement dans l'app
 
-Formats : mp4, mov, m4v, 3gp, mp3, m4a, aac, wav, aiff, caf, flac.
+## 🌍 Langues
 
-## Mettre le projet sur GitHub (depuis Windows)
+Français · English · Русский · Español
 
-1. Créez un dépôt vide nommé `elara` sur github.com (sans README).
-2. Dézippez ce dossier, ouvrez-le dans VS Code, puis dans le terminal (Ctrl + `) :
+## 🛠️ Technologies
 
-```bash
-git init
-git add .
-git commit -m "Elara - étape 1"
-git branch -M main
-git remote add origin https://github.com/VOTRE-COMPTE/elara.git
-git push -u origin main
-```
+- **Swift / SwiftUI** (application iOS native)
+- **Codemagic** pour la compilation sans Mac
+- **Git / GitHub** pour le suivi du code
 
-## Compiler avec Codemagic (sans compte Apple)
+## 📱 Installation
 
-1. Sur codemagic.io : **Add application** → GitHub → choisissez `elara`.
-2. Type de projet : **iOS App**, configuration : **codemagic.yaml**.
-3. Lancez **Start new build** → workflow **« Elara – Vérification »**.
-4. Si le build est vert, le code compile. Ensuite, chaque `git push` relance la vérification.
+> Application en cours de développement.
 
-## Plus tard : TestFlight (avec le compte Apple Developer)
+1. Récupérez le fichier `.ipa` généré par la CI
+2. Installez-le sur votre iPhone avec [Sideloadly](https://sideloadly.io/)
+3. Une publication sur l'App Store est envisagée plus tard
 
-1. Dans App Store Connect : créez l'app avec l'identifiant `com.kounandi.elara`.
-2. Créez une clé API (Utilisateurs et accès → Intégrations) et ajoutez-la dans Codemagic
-   (Teams → Integrations → App Store Connect) sous le nom **Elara ASC**.
-3. Lancez le workflow **« Elara – Envoi sur TestFlight »**.
+## 🗺️ Feuille de route
 
-Le projet Xcode est généré automatiquement par XcodeGen à partir de `project.yml`.
+- [x] Lecteur vidéo
+- [x] Dossier privé
+- [ ] Lecteur audio complet
+- [ ] Compression vidéo
+- [ ] Transfert Wi‑Fi
+- [ ] Version Android (APK) avec dossier privé (code, schéma, empreinte ou visage)
+- [ ] Publication sur l'App Store
+
+## 👤 Auteur
+
+Créé par **Faxel Kwadio** — [@Faxelh](https://github.com/Faxelh)
