@@ -37,7 +37,7 @@ Français · English · Русский · Español
 - [x] Compression vidéo
 - [x] Transfert Wi‑Fi
 - [x] Version Android (APK) avec dossier privé (code, schéma, empreinte ou visage)
-- [x] Publication sur l'App Store
+- [] Publication sur l'App Store
 
 ## 🚀 Mes projets
 | Projet | Description |
