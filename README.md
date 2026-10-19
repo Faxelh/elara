@@ -39,6 +39,20 @@ Français · English · Русский · Español
 - [x] Version Android (APK) avec dossier privé (code, schéma, empreinte ou visage)
 - [] Publication sur l'App Store
 
+## 📁 Structure du dépôt
+
+```
+├── android/            Application Android
+├── Elara/              Application iPhone
+├── scripts/             Ressources
+├── .github/workflows/  Compilation automatique
+├── HISTORIQUE.json     Historique des nouveautés
+└── VERSION             Numéro de version
+```
+
+## 👤 Auteur
+Créé par **Faxel Kwadio** — [@Faxelh](https://github.com/Faxelh)
+
 ## 🚀 Mes projets
 | Projet | Description |
 |---|---|
